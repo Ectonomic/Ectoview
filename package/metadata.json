@@ -1,0 +1,25 @@
+{
+    "KPackageStructure": "KWin/Effect",
+    "KPlugin": {
+        "Authors": [
+            {
+                "Name": "Ectoview contributors"
+            },
+            {
+                "Email": "vlad.zahorodnii@kde.org",
+                "Name": "Vlad Zahorodnii (KWin's Overview, which Ectoview is built from)"
+            }
+        ],
+        "Category": "Window Management",
+        "Description": "Overview of your windows and desktops: drag desktops to reorder them, keep it to your primary screen, and the Ecto look",
+        "EnabledByDefault": false,
+        "Id": "ectoview",
+        "License": "GPL-2.0-or-later",
+        "Name": "Ectoview",
+        "Version": "0.1.0"
+    },
+    "X-KDE-ConfigModule": "kwin_ectoview_config",
+    "X-KDE-Ordering": 70,
+    "X-KWin-Border-Activate": true,
+    "X-Plasma-API": "declarativescript"
+}

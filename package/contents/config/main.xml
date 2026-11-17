@@ -1,0 +1,101 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!-- Ectoview's settings, in kwinrc [Effect-ectoview]. Overview's own settings keep their keys and defaults
+     (upstream/kwin-6.7.5-overview/overviewconfig.kcfg); the rest are Ectoview's. -->
+<kcfg xmlns="http://www.kde.org/standards/kcfg/1.0"
+      xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+      xsi:schemaLocation="http://www.kde.org/standards/kcfg/1.0 http://www.kde.org/standards/kcfg/1.0/kcfg.xsd">
+    <kcfgfile name=""/>
+    <group name="">
+        <entry name="IgnoreMinimized" type="Bool">
+            <default>false</default>
+        </entry>
+        <entry name="FilterWindows" type="Bool">
+            <default>true</default>
+        </entry>
+        <entry name="OrganizedGrid" type="Bool">
+            <default>true</default>
+        </entry>
+        <entry name="BorderActivate" type="IntList">
+            <default>7</default>
+        </entry>
+        <entry name="GridBorderActivate" type="IntList">
+            <default></default>
+        </entry>
+        <entry name="TouchBorderActivate" type="IntList">
+            <default></default>
+        </entry>
+        <entry name="GridTouchBorderActivate" type="IntList">
+            <default></default>
+        </entry>
+        <!-- Screens other than the primary: 0 = all of Ectoview (as Overview), 1 = only their windows,
+             laid out, without the desktop bar and toolbar, 2 = left as they are -->
+        <entry name="OtherScreens" type="Int">
+            <default>0</default>
+        </entry>
+        <!-- Where the desktop bar sits: 0 = top, 1 = bottom, 2 = left, 3 = right (left and right: a vertical list) -->
+        <entry name="BarPosition" type="Int">
+            <default>0</default>
+        </entry>
+        <!-- The toolbar: the search field and the settings gear -->
+        <entry name="ShowToolbar" type="Bool">
+            <default>true</default>
+        </entry>
+        <!-- What typing searches: 0 = the current desktop's windows (as Overview), 1 = every desktop in
+             the shown group, 2 = every desktop's, hidden ones too (the caret inside the search field picks) -->
+        <entry name="SearchScope" type="Int">
+            <default>0</default>
+        </entry>
+        <!-- Desktop groups (design proposal 4), in the pill's order: "id:name" each. Empty means one
+             group, Desktops, holding every desktop. The Hidden group is always there and isn't listed. -->
+        <entry name="Groups" type="StringList">
+            <default></default>
+        </entry>
+        <!-- Each desktop's group: "desktop id=group id" (group id "hidden" for Hidden), by KWin's id
+             for the desktop, so renaming or moving one keeps its group. A desktop not listed is in
+             the first group. -->
+        <entry name="DesktopGroups" type="StringList">
+            <default></default>
+        </entry>
+        <!-- The desktop each group showed last, "group id=desktop id": choosing a group goes there -->
+        <entry name="GroupLastDesktop" type="StringList">
+            <default></default>
+        </entry>
+        <!-- Old settings, read once by the build that replaced them and then removed:
+             HiddenDesktops (desktop ids) became the Hidden group, SearchAllDesktops became SearchScope 2,
+             PrimaryScreenOnly became OtherScreens 2 -->
+        <entry name="PrimaryScreenOnly" type="Bool">
+            <default>false</default>
+        </entry>
+        <entry name="HiddenDesktops" type="StringList">
+            <default></default>
+        </entry>
+        <entry name="SearchAllDesktops" type="Bool">
+            <default>false</default>
+        </entry>
+        <!-- Look: 0 = Ecto, 1 = KDE (your color scheme and font) -->
+        <entry name="Look" type="Int">
+            <default>0</default>
+        </entry>
+        <!-- Accent: 0 = Ecto green, 1 = your KDE accent, 2 = CustomAccentColor -->
+        <entry name="Accent" type="Int">
+            <default>0</default>
+        </entry>
+        <entry name="CustomAccentColor" type="Color">
+            <default>#c8f22e</default>
+        </entry>
+        <!-- The installed build's folder under contents/ui (install.sh names it for its contents);
+             "impl" is the source tree's, as kpackagetool6 installs it straight from package/ -->
+        <entry name="Build" type="String">
+            <default>impl</default>
+        </entry>
+        <!-- The settings page the gear beside the search field opens: install.sh writes its full
+             path, so it opens before a new login has put its folder on Qt's plugin path -->
+        <entry name="SettingsModule" type="String">
+            <default>kwin/effects/configs/kwin_ectoview_config</default>
+        </entry>
+        <!-- How dark the backdrop behind the windows gets, in percent (0 to 90) -->
+        <entry name="BackgroundDim" type="Int">
+            <default>62</default>
+        </entry>
+    </group>
+</kcfg>

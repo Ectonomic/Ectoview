@@ -1,0 +1,11 @@
+build/
+build-configure.log
+__pycache__/
+.cache/
+# private notes, kept on this machine only
+CLAUDE.md
+docs/ideas.md
+# capture pictures taken on the owner's machine (real drive names, KRunner results, a prompt);
+# make them again with tests/capture/run.sh OUT then design/mock/tools/make-images.py OUT
+design/mock/img/today-*
+design/mock/img/win-*.png
