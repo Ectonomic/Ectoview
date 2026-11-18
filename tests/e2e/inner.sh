@@ -22,6 +22,7 @@ INSTALLER=; case "$SCENARIO" in install|plant-update|migrate) INSTALLER=1;; esac
 # other screens: 0 all of Ectoview, 1 only their windows, 2 left as they are
 OTHER=0; case "$SCENARIO" in primary|plant-primary|readme-screens) OTHER=2;; windows|plant-windows|crossscreen) OTHER=1;; esac
 case "$SCENARIO" in groupshortcut|plant-groupshortcut) DESKTOPS_N=${DESKTOPS_N:-14};; esac
+case "$SCENARIO" in gridstack|plant-gridstack) DESKTOPS_N=${DESKTOPS_N:-19};; esac
 if [ -n "$README" ]; then
   DESKTOPS=$(readme_desktops)
 elif [ "$SCENARIO" = overflow ] || [ -n "${DESKTOPS20:-}" ] || [ -n "${DESKTOPS_N:-}" ]; then
@@ -60,6 +61,7 @@ $(case "$SCENARIO" in beacons|plant-beacons) printf 'Groups=desktops:Desktops,g1
 $([ "$SCENARIO" = groupreorder ] && printf 'Groups=desktops:Desktops,g1:Games,g2:Media\nDesktopGroups=d1=desktops,d2=desktops,d3=g1,d4=g2\n')
 $([ "$SCENARIO" = windrag ] && printf 'Groups=desktops:Desktops,g1:Games\nDesktopGroups=d1=desktops,d2=desktops,d3=g1,d4=g1\n')
 $([ "$SCENARIO" = hide ] && printf 'HiddenDesktops=d2\nSearchAllDesktops=true\nPrimaryScreenOnly=true\n')
+$(case "$SCENARIO" in gridstack|plant-gridstack) printf 'Groups=g1:Standard,g2:Personal,g3:Development,g4:Business\nDesktopGroups=%s\n' "$(for i in $(seq 19); do printf 'd%d=%s,' $i $( { [ $i -le 3 ] && echo g1; } || { [ $i -le 6 ] && echo g2; } || { [ $i -le 17 ] && echo g3; } || echo g4); done)";; esac)
 RC
 # planted faults, each a copy of the package with one boundary broken, to prove the checks catch it
 if [ "$SCENARIO" = plant-reorder ]; then
@@ -67,6 +69,12 @@ if [ "$SCENARIO" = plant-reorder ]; then
   P=$XDG_DATA_HOME/kwin/effects/ectoview/contents/ui/impl/DesktopBar.qml
   sed -i 's#^\( *\)bar.moveDesktop(me, place);#\1// planted: no move#' "$P"
   grep -q 'planted: no move' "$P" && log "planted: a drop doesn't move the desktop" || log "FAIL plant not placed"
+fi
+if [ "$SCENARIO" = plant-gridstack ]; then
+  # Grid View back to one line per group, as wide as the longest (no stacking)
+  P=$XDG_DATA_HOME/kwin/effects/ectoview/contents/ui/impl/Main.qml
+  sed -i 's#for (let c = 1; c <= longest; c++) {#for (let c = longest; c <= longest; c++) { // planted#' "$P"
+  grep -q 'planted' "$P" && log "planted: one line per group" || log "FAIL plant not placed"
 fi
 if [ "$SCENARIO" = plant-beacons ]; then
   # a desktop whose window asks for attention keeps its beacon grey
@@ -378,28 +386,60 @@ kcmview|shortcuts)
   shot "$OUT/after.png"
   log "keys: $(gdbus call --session --dest org.kde.kglobalaccel --object-path /kglobalaccel --method org.kde.KGlobalAccel.shortcutKeys "['kwin', 'Ectoview Next Desktop in Desktop Group', '', '']" 2>&1)"
   ;;
+gridstack|plant-gridstack)
+  # design proposal 10: groups of 3, 3, 11 and 2 desktops (D1 to D19) on the 3440-wide main screen,
+  # you on D11 (Development's fifth, no windows). Grid View stacks Development's eleven onto lines of
+  # the column count that draws the desktops biggest, lined up, the grid centered. Down goes to the
+  # desktop below on Development's next line; a click on its second line's first desktop goes there.
+  order() { script 'print("order current " + workspace.currentDesktop.name);'; grep "js: order" "$OUT/kwin.log" | tail -1 | sed 's/.*js: order //'; }
+  read MX MW < <(python3 -c "import re;t=open('$OUT/kwin.log').read();m=re.search(r'Virtual-1 \{\"x\":([0-9.]+),\"y\":[0-9.]+,\"width\":([0-9.]+)',t);print(m.group(1),m.group(2))")
+  cell() { python3 -I - "$OUT/kwin.log" "$MX" "$MW" "$1" "$2" <<'PY'
+import sys, re, json
+log, mx, mw, g, i = sys.argv[1], float(sys.argv[2]), float(sys.argv[3]), int(sys.argv[4]), int(sys.argv[5])
+l = json.loads(re.findall(r'Ectoview: grid layout Virtual-1 (\{.*\})', open(log, errors='replace').read())[-1])
+print(round(mx + l['x0'] + l['head'] + (i % l['cols']) * l['cellW'] + l['s'] * mw / 2), round(l['tops'][g] + (i // l['cols']) * l['cellH'] + l['s'] * 1440 / 2))
+PY
+}
+  script 'workspace.currentDesktop = workspace.desktops[10];'; sleep 1; wait_closed
+  kglob "Ectoview Grid View"; sleep 2.5; shot "$OUT/grid.png"
+  log "places: mx=$MX mw=$MW"
+  feed "key 108"; sleep 1; log "down: $(order)"
+  read X Y < <(cell 2 "$(python3 -I -c "import re,json;print(json.loads(re.findall(r'Ectoview: grid layout Virtual-1 (\{.*\})',open('$OUT/kwin.log',errors='replace').read())[-1])['cols'])")")
+  feed "move $X $Y"; sleep 0.4; feed "click"; sleep 1.5; log "clicked: $(order)"
+  ;;
 gridgroups)
-  # Desktops (Work, Code), Games (Design), Hidden (Music); Grid View lays them out a row per group
+  # Desktops (Work, Code), Games (Design), Hidden (Music); Grid View lays them out a row per group (few
+  # desktops: one line each, the grid centered)
   order() { script 'print("order " + workspace.desktops.map(d => d.name).join(",") + " current " + workspace.currentDesktop.name);'; grep "js: order" "$OUT/kwin.log" | tail -1 | sed 's/.*js: order //'; }
   rc() { kreadconfig6 --file kwinrc --group Effect-ectoview --key "$1"; }
   read MX MW < <(python3 -c "import re;t=open('$OUT/kwin.log').read();m=re.search(r'Virtual-1 \{\"x\":([0-9.]+),\"y\":[0-9.]+,\"width\":([0-9.]+)',t);print(m.group(1),m.group(2))")
   # a cell's middle: 300 px of headings, then columns; rows share the height above a 64 px foot
-  cell() { python3 -c "cw=($MW-300)/$1; ch=(1440-64)/$2; print(round($MX+300+($4+0.5)*cw), round(($3+0.5)*ch))"; }
+  # the middle of desktop I of group G (in Grid View's order of groups), from the layout Ectoview logs
+  # for the main screen when it changes ("Ectoview: grid layout Virtual-1 {...}"), the latest one
+  cell() { python3 -I - "$OUT/kwin.log" "$MX" "$MW" "$1" "$2" <<'PY'
+import sys, re, json
+log, mx, mw, g, i = sys.argv[1], float(sys.argv[2]), float(sys.argv[3]), int(sys.argv[4]), int(sys.argv[5])
+l = json.loads(re.findall(r'Ectoview: grid layout Virtual-1 (\{.*\})', open(log, errors='replace').read())[-1])
+x = mx + l['x0'] + l['head'] + (i % l['cols']) * l['cellW'] + l['s'] * mw / 2
+y = l['tops'][g] + (i // l['cols']) * l['cellH'] + l['s'] * 1440 / 2
+print(round(x), round(y))
+PY
+}
   kglob "Ectoview Grid View"; sleep 2.5; shot "$OUT/grid.png"
   # Design, in the second row (2 rows, 2 columns): a click goes there
-  read X Y < <(cell 2 2 1 0); feed "move $X $Y"; sleep 0.4; feed "click"; sleep 1.5
+  read X Y < <(cell 1 0); feed "move $X $Y"; sleep 0.4; feed "click"; sleep 1.5
   log "clicked design: $(order)"
   # "1 hidden" brings the Hidden row in (3 rows); a click on Music goes there
   kglob "Ectoview Grid View"; sleep 2.5
   feed "move $(python3 -c "print(round($MX + 40 + 50))") $((1440 - 32))"; sleep 0.4; feed "click"; sleep 1.5; shot "$OUT/grid-hidden.png"
-  read X Y < <(cell 2 3 2 0); feed "move $X $Y"; sleep 0.4; feed "click"; sleep 1.5
+  read X Y < <(cell 2 0); feed "move $X $Y"; sleep 0.4; feed "click"; sleep 1.5
   log "clicked music: $(order) groups=$(rc DesktopGroups)"
   # back on Work; drag Code (row 0, column 1) into Games' row (onto Design): Code joins Games, after Design
   script 'workspace.currentDesktop = workspace.desktops[0];'; sleep 0.6; wait_closed
   log "before grid: active=$(qdbus org.kde.KWin /Effects org.kde.kwin.Effects.activeEffects 2>/dev/null | tr '\n' ' ') $(order)"
   kglob "Ectoview Grid View"; sleep 2.5
   log "after grid: active=$(qdbus org.kde.KWin /Effects org.kde.kwin.Effects.activeEffects 2>/dev/null | tr '\n' ' ')"
-  read X1 Y1 < <(cell 2 2 0 1); read X2 Y2 < <(cell 2 2 1 0)
+  read X1 Y1 < <(cell 0 1); read X2 Y2 < <(cell 1 0)
   feed "move $X1 $Y1"; sleep 0.4; feed "down"; sleep 0.2
   for f in 0.1 0.25 0.4 0.55 0.7 0.85 1; do feed "move $(python3 -c "print(round($X1+($X2-$X1)*$f), round($Y1+($Y2-$Y1)*$f))")"; sleep 0.1; done
   sleep 0.5; shot "$OUT/grid-drag.png"; feed "up"; sleep 1.5

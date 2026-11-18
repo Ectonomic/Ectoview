@@ -45,7 +45,8 @@ biggest first. Each links to its section.
 |---|---|---|
 | [Desktop groups](#desktop-groups) | ❌ One long row of every desktop | ✅ Desktops sorted into groups you name (Work, Home, Play), one group in the bar at a time, stepped through with ^ and v or four new shortcuts |
 | [Notification beacons](#notification-beacons) | ❌ No: you find the desktop with the window that wants you | ✅ A dot beside each desktop's name lights when a window there asks for attention, and the groups' button lights for a group you aren't looking at |
-| [Hidden desktops](#hidden-desktops) | ❌ No | ✅ A Hidden group: desktops kept out of the bar and out of Grid View until you open it |
+| [Hidden desktops](#hidden-desktops) | ❌ No | ✅ A Hidden group: desktops kept out of the bar and out of Grid View until you open it, and quiet: they light no beacon |
+| [Grid View, by group](#grid-view-by-group) | Every desktop in one grid | A row per group, a long group stacked onto more rows lined up in columns, and the grid centered, so the desktops are drawn as big as the screen allows |
 | [Drag desktops into order](#drag-desktops-into-order) | Only in Grid View, by dropping a desktop on another | In the bar too, sliding the others aside, and the bar scrolls along when you reach its end |
 | [Carry a window to another desktop](#carry-a-window-to-another-desktop) | Drop it on a desktop in the bar | Also hold it on the < or > beside the big view: after a pause the view moves on, carrying the window |
 | [Group shortcuts with Ectoview closed](#step-through-groups) | — | The new group's desktop rises in where you are, instead of the screen sliding sideways past every desktop between |
@@ -104,13 +105,16 @@ Hidden is a group of its own: its desktops stay out of the bar and out of Grid V
 you choose Hidden in the list. The desktop you're on still shows in the bar, dimmed, with a
 badge saying where it lives.
 
-### Grid View, a row per group
+### Grid View, by group
 
-Grid View lays your desktops out a row per group, each row headed with its group's name.
-Drop a desktop on another row to move it to that group.
+Grid View lays your desktops out a row per group, each headed with its group's name, and
+sits in the middle of the screen. A group with more desktops than fit in a row wraps onto
+more rows, lined up in columns, so the desktops are drawn as big as the screen allows: on an
+ultrawide screen, a group of eleven takes two rows of six and five. Drop a desktop on
+another group's rows to move it to that group.
 
 <p align="center">
-  <img src="docs/pictures/readme-grid.webp" width="100%" alt="Grid View: a row for Work with Code, Review, Docs and Mail, a row for Home with Music and Photos, and a row for Play with Games and Chat, each row headed with its group's name">
+  <img src="docs/pictures/readme-grid.webp" width="100%" alt="Grid View in the middle of the screen: Work's ten desktops on two rows lined up in columns, then a row for Home with Music and Photos and a row for Play with Games and Chat, each group headed with its name">
 </p>
 
 ### Search what you're working on

@@ -379,6 +379,53 @@ elif scenario == 'gridgroups':
     dc = line('dragged code')
     check("a desktop dragged into another group's row joins that group, at the end of its row", 'Work,Design,Code,Music' in dc and re.search(r'd2=g1\b', dc), dc)
     check('arrow keys move between rows in the group grid', line('down').endswith('current Design'), line('down'))
+elif scenario in ('gridstack', 'plant-gridstack'):
+    common()
+    steps = (out / 'steps.log').read_text(errors='replace') if (out / 'steps.log').exists() else ''
+    lays = re.findall(r'Ectoview: grid layout Virtual-1 (\{.*\})', log)
+    places = dict((k, float(v)) for k, v in re.findall(r'(\w+)=(-?[\d.]+)', (re.search(r'places: (.*)', steps) or [None, ''])[1]))
+    im = img('grid')
+    if lays and places and im:
+        L = json.loads(lays[-1]); cols = L['cols']
+        mw = places['mw']; s = im.height / 1440; ox = im.width - round(3440 * s)
+        lum = lambda x, y: sum(im.getpixel((ox + round(x * s), round(y * s)))) / 3
+        # what's drawn along the middle of Development's first line: the desktops (Plasma's bright
+        # wallpaper) against the dimmed backdrop, measured across the whole screen
+        y1 = L['tops'][2] + L['s'] * 1440 / 2
+        lit = [x for x in range(0, int(mw), 2) if lum(x, y1) > 120]
+        runs, start = [], None
+        for a_, b_ in zip(lit, lit[1:] + [None]):
+            start = a_ if start is None else start
+            if b_ is None or b_ - a_ > 6:
+                runs.append((start, a_)); start = None
+        # a desktop's width, from the accent ring around the one you're on (D11, Development's fifth):
+        # the same on any wallpaper (a dark one breaks the bright runs up)
+        cx = L['x0'] + L['head'] + 4 * L['cellW'] + L['s'] * mw / 2
+        ring = [x for x in range(int(cx - L['cellW']), int(cx + L['cellW']))
+                if (lambda r, g, b: g > 200 and 150 < r < 245 and b < 110)(*im.getpixel((ox + round(x * s), round(y1 * s))))]
+        widest = (max(ring) - min(ring)) if ring else 0
+        one_line_w = (mw - 300) / 11
+        check("Development's eleven desktops stack onto lines, drawn wider than one line per group allows",
+              cols < 11 and widest > one_line_w * 1.3, f'{cols} columns; desktops drawn {widest} px wide, one line per group {one_line_w:.0f}')
+        # its second line is really there: its first desktop drawn where the layout puts it
+        y2 = y1 + L['cellH']
+        x2 = L['x0'] + L['head'] + L['s'] * mw / 2
+        check("and its second line is drawn below the first, lined up under the first column", lum(x2, y2) > 120 and lum(x2 - L['s'] * mw * 0.6, y2) < 110,
+              f'brightness {lum(x2, y2):.0f} inside its first desktop, {lum(x2 - L["s"] * mw * 0.6, y2):.0f} left of it')
+        # centered: the desktops of the full line span the middle, the names' column to their left
+        if runs:
+            left, right = runs[0][0], runs[-1][1]
+            mid = (left + right) / 2
+            check('the grid is centered on the screen (its desktops with the names\' column beside them)', abs(mid - (mw / 2 + L['head'] / 2)) < 40,
+                  f'desktops from {left} to {right} px; their middle {mid:.0f}, the grid\'s {mw / 2 + L["head"] / 2:.0f}')
+        want_down = f'D{11 + cols}' if 4 + cols < 11 else 'D11'
+        check('Down goes to the desktop below, on the next line', (re.search(r'down: current (\S+)', steps) or [None, ''])[1] == want_down,
+              (re.search(r'down: (.*)', steps) or [None, ''])[1] + f' (wanted {want_down})')
+        want_click = f'D{7 + cols}'
+        check("a click on the second line's first desktop goes there", (re.search(r'clicked: current (\S+)', steps) or [None, ''])[1] == want_click,
+              (re.search(r'clicked: (.*)', steps) or [None, ''])[1] + f' (wanted {want_click})')
+    else:
+        check('the grid pictured and its layout logged', False, f'{len(lays)} layouts, places {places}')
 elif scenario in ('arrows', 'plant-arrows'):
     common()
     steps = (out / 'steps.log').read_text(errors='replace') if (out / 'steps.log').exists() else ''

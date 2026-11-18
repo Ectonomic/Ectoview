@@ -462,19 +462,75 @@ FocusScope {
         }
         return out;
     }
-    // each desktop's row and column in the group grid, by KWin's id for it
-    readonly property var gridPos: {
-        const out = {};
-        gridGroups.forEach((g, r) => g.desktops.forEach((d, c) => out[d.id] = { row: r, col: c }));
-        return out;
-    }
-    // the grid's room: a column of row headings on the left, the "hidden" line at the bottom
+    // the grid's room: a column of group names left of the desktops, the "hidden" line at the bottom
     readonly property real gridHeadWidth: groupGrid ? 300 : 0
     readonly property real gridFootHeight: groupGrid && hiddenDesktops.length > 0 ? 64 : 0
-    readonly property int gridColumnsN: groupGrid ? Math.max(1, ...gridGroups.map(g => g.desktops.length)) : columns
-    readonly property int gridRowsN: groupGrid ? Math.max(1, gridGroups.length) : rows
-    readonly property real gridCellW: (width - gridHeadWidth) / gridColumnsN
-    readonly property real gridCellH: (height - gridFootHeight) / gridRowsN
+    // Ectoview: the group grid's layout (design proposal 10, lined up in columns): of every column
+    // count, the one that draws the desktops biggest; a group with more desktops than that wraps
+    // onto more lines, each starting under the first column; the whole grid centered on the screen.
+    // (Logged when it changes, for the tests: "Ectoview: grid layout")
+    readonly property var gridLayout: {
+        if (!groupGrid) {
+            return null;
+        }
+        const label = 40, margin = 40, groupGap = 24;
+        const ns = gridGroups.map(g => g.desktops.length);
+        const longest = Math.max(1, ...ns);
+        let best = null;
+        for (let c = 1; c <= longest; c++) {
+            const lines = ns.reduce((a, n) => a + Math.ceil(n / c), 0);
+            const cw = (width - gridHeadWidth - 2 * margin) / c;
+            const ch = (height - gridFootHeight - 2 * margin - Math.max(0, ns.length - 1) * groupGap) / Math.max(1, lines) - label;
+            const sc = Math.min(cw / width, ch / height);
+            // a tie goes to fewer lines
+            if (!best || sc > best.s + 1e-6) {
+                best = { cols: c, lines: lines, s: sc };
+            }
+        }
+        const cellW = best.s * width, cellH = best.s * height + label;
+        const usedCols = Math.min(best.cols, longest);
+        const gridW = gridHeadWidth + usedCols * cellW;
+        const gridH = best.lines * cellH + Math.max(0, ns.length - 1) * groupGap;
+        const x0 = Math.max(0, (width - gridW) / 2), y0 = Math.max(0, (height - gridFootHeight - gridH) / 2);
+        const tops = [];
+        let y = y0;
+        for (const n of ns) {
+            tops.push(y);
+            y += Math.ceil(n / best.cols) * cellH + groupGap;
+        }
+        return { cols: best.cols, lines: best.lines, s: best.s, cellW: cellW, cellH: cellH, x0: x0, y0: y0, head: gridHeadWidth, tops: tops };
+    }
+    onGridLayoutChanged: if (gridLayout) console.info("Ectoview: grid layout " + targetScreen.name + " " + JSON.stringify(gridLayout))
+    // the grid's lines as drawn (a long group's desktops on more than one), top to bottom
+    readonly property var gridLines: {
+        const out = [];
+        if (!gridLayout) {
+            return out;
+        }
+        gridGroups.forEach((g, gi) => {
+            for (let i = 0; i < g.desktops.length; i += gridLayout.cols) {
+                out.push({ group: gi, desktops: g.desktops.slice(i, i + gridLayout.cols), y: gridLayout.tops[gi] + i / gridLayout.cols * gridLayout.cellH });
+            }
+        });
+        return out;
+    }
+    // each desktop's line and column in the group grid, and where it's drawn, by KWin's id for it
+    readonly property var gridPos: {
+        const out = {};
+        // (no layout: Grid View with groups is closing, or not shown)
+        if (!gridLayout) {
+            return out;
+        }
+        gridLines.forEach((l, li) => l.desktops.forEach((d, c) => out[d.id] = {
+            row: li, col: c, x: gridLayout.x0 + gridLayout.head + c * gridLayout.cellW, y: l.y }));
+        return out;
+    }
+    // (groupGrid can change a moment before gridLayout follows it)
+    readonly property bool gridLaidOut: groupGrid && !!gridLayout
+    readonly property int gridColumnsN: gridLaidOut ? gridLayout.cols : columns
+    readonly property int gridRowsN: gridLaidOut ? Math.max(1, gridLayout.lines) : rows
+    readonly property real gridCellW: gridLaidOut ? gridLayout.cellW : (width - gridHeadWidth) / gridColumnsN
+    readonly property real gridCellH: gridLaidOut ? gridLayout.cellH : (height - gridFootHeight) / gridRowsN
     // how small a desktop is drawn in the grid (Overview's 1 / the larger of rows and columns)
     readonly property real gridScaleS: Math.min(gridCellW / width, gridCellH / height)
     // a desktop dragged over another group's row in the grid: that group, lit up
@@ -490,7 +546,8 @@ FocusScope {
             KWinComponents.Workspace.moveDesktop(desktop, from < last ? last : last + 1);
         }
     }
-    // arrow keys in the group grid: across a row, and up and down between rows
+    // arrow keys in the group grid: across a line, and up and down between lines as drawn (a long
+    // group's second line is below its first)
     function selectNextInGroupGrid(direction) {
         const at = gridPos[currentDesktop ? currentDesktop.id : ""];
         if (!at) {
@@ -503,10 +560,10 @@ FocusScope {
         case EctoWindowHeap.Direction.Left: c--; inverted = EctoWindowHeap.Direction.Right; break;
         case EctoWindowHeap.Direction.Right: c++; inverted = EctoWindowHeap.Direction.Left; break;
         }
-        if (r < 0 || r >= gridGroups.length || c < 0) {
+        if (r < 0 || r >= gridLines.length || c < 0) {
             return false;
         }
-        const row = gridGroups[r].desktops;
+        const row = gridLines[r].desktops;
         if (c >= row.length) {
             if (r === at.row) {
                 return false;
@@ -867,15 +924,19 @@ FocusScope {
                 required property int index
                 visible: gridVal > 0
                 opacity: gridVal
-                x: 0
-                y: index * container.gridCellH
-                width: container.width
-                height: container.gridCellH
+                // the group's lines: from its first to its last, as many columns wide as its longest
+                // (a row is made a moment before the layout has a place for it, as the Hidden row comes in)
+                readonly property var layout: container.gridLayout
+                readonly property int lineCount: layout ? Math.ceil(modelData.desktops.length / layout.cols) : 1
+                x: layout ? layout.x0 : 0
+                y: layout ? (layout.tops[index] ?? 0) : 0
+                width: (layout ? layout.head + Math.min(modelData.desktops.length, layout.cols) * container.gridCellW : 0)
+                height: lineCount * container.gridCellH
                 Rectangle {
                     x: container.gridHeadWidth - 16
-                    y: 10
-                    width: gridRowItem.modelData.desktops.length * container.gridCellW + 32
-                    height: parent.height - 20
+                    y: -12
+                    width: (gridRowItem.layout ? Math.min(gridRowItem.modelData.desktops.length, gridRowItem.layout.cols) : 1) * container.gridCellW + 32
+                    height: parent.height + 4
                     radius: 16
                     readonly property bool target: container.gridDropGroup === gridRowItem.modelData.id
                     color: target ? Qt.rgba(effect.theme.accent.r, effect.theme.accent.g, effect.theme.accent.b, 0.08) : "transparent"
@@ -899,10 +960,11 @@ FocusScope {
                         }
                     }
                 }
+                // the group's name beside its first line, halfway down that line's desktops
                 Column {
                     x: 40
                     width: container.gridHeadWidth - 72
-                    anchors.verticalCenter: parent.verticalCenter
+                    y: ((gridRowItem.layout ? gridRowItem.layout.s : 0) * container.height - implicitHeight) / 2
                     spacing: 4
                     Row {
                         spacing: 10
@@ -1125,15 +1187,17 @@ FocusScope {
                     },
                     // Further little translation in the grids to align the elements
                     // to the center of their cell
+                    // (Ectoview: in the group grid a cell is the desktop's own width, and its name's
+                    // room below, so the desktop sits at the cell's top)
                     Translate{
                         x: (container.gridCellW - width * container.gridScaleS) / 2 * gridVal
-                        y: (container.gridCellH - height * container.gridScaleS) / 2 * gridVal
+                        y: container.groupGrid ? 0 : (container.gridCellH - height * container.gridScaleS) / 2 * gridVal
                     },
                     // When in desktop grid, translates the desktop so that the whole
-                    // grid fits in the view
+                    // grid fits in the view (Ectoview: the group grid's place for it, from gridPos)
                     Translate {
-                        x: (container.gridHeadWidth + mainBackground.gridColumn * container.gridCellW) * gridVal
-                        y: mainBackground.gridRow * container.gridCellH * gridVal
+                        x: (mainBackground.gridAt ? mainBackground.gridAt.x : container.gridHeadWidth + mainBackground.gridColumn * container.gridCellW) * gridVal
+                        y: (mainBackground.gridAt ? mainBackground.gridAt.y : mainBackground.gridRow * container.gridCellH) * gridVal
                     },
                     // Initially places transition desktops in a grid around the current one,
                     // and moves them slightly to avoid overlapping the UI

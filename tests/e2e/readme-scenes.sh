@@ -15,11 +15,15 @@ README_SCENE=${SCENARIO#readme-}
 readme_desktops() {
   local names=(Code Review Docs Mail Music Photos Games Chat Scratch) i
   [ "$README_SCENE" = overflow ] && names=(Code Review Docs Mail Specs Builds Design Tickets Notes Calls Plans Ideas Music Games)
+  [ "$README_SCENE" = grid ] && names=(Code Review Docs Mail Specs Builds Design Tickets Notes Calls Music Photos Games Chat Scratch)
   printf '[Desktops]\nNumber=%d\nRows=1\n' ${#names[@]}
   for i in "${!names[@]}"; do printf 'Name_%d=%s\nId_%d=d%d\n' $((i + 1)) "${names[$i]}" $((i + 1)) $((i + 1)); done
 }
 readme_groups() {
-  if [ "$README_SCENE" = overflow ]; then
+  if [ "$README_SCENE" = grid ]; then
+    # Work long enough to stack in Grid View (ten), Home and Play short, one Hidden
+    printf 'Groups=w:Work,h:Home,p:Play\nDesktopGroups=%s\n' "$(for i in $(seq 15); do printf 'd%d=%s,' $i $( { [ $i -le 10 ] && echo w; } || { [ $i -le 12 ] && echo h; } || { [ $i -le 14 ] && echo p; } || echo hidden); done)"
+  elif [ "$README_SCENE" = overflow ]; then
     printf 'Groups=w:Work,p:Play\nDesktopGroups=%s\n' "$(for i in $(seq 14); do printf 'd%d=%s,' $i $([ $i -le 12 ] && echo w || echo p); done)"
   else
     printf 'Groups=w:Work,h:Home,p:Play\nDesktopGroups=d1=w,d2=w,d3=w,d4=w,d5=h,d6=h,d7=p,d8=p,d9=hidden\n'
@@ -259,7 +263,7 @@ scene_barbottom() { bar_still barbottom; }
 scene_barleft() { bar_still barleft; }
 scene_barright() { bar_still barright; }
 scene_grid() {
-  # Grid View: a row per desktop group
+  # Grid View: a row per desktop group; Work's ten stack onto more rows, lined up in columns, the grid centered
   place $((CX + 300)) $((MY + 700))
   kglob "Ectoview Grid View"; hold 2000
   film still grid; film_wait grid.done
