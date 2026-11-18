@@ -7,7 +7,7 @@
 # scale 1.5 (1707x960), the dashboard screen left of it 2560x1440 at 1.75 (1463x823), bottoms lined up.
 
 # the scenes, in the order the README shows them
-SCENES="hero overview groups todesktop towindow reorder arrows beacons shortcut screens kdelook grid overflow"
+SCENES="hero overview groups todesktop towindow reorder arrows beacons shortcut screens kdelook bartop barbottom barleft barright grid overflow"
 
 README_SCENE=${SCENARIO#readme-}
 
@@ -246,6 +246,18 @@ scene_kdelook() {
   film still kdelook; film_wait kdelook.done
   kglob "Ectoview"; hold 600; touch "$W/readme-done"
 }
+# where the bar sits (the README's 2x2): along the top and the bottom with the toolbar, down the
+# left and the right without it, so the groups' button and the gear sit at the bar's end
+bar_still() {
+  place $((CX + 300)) $((MY + 420))
+  kglob "Ectoview"; hold 1800
+  film still "$1"; film_wait "$1.done"
+  kglob "Ectoview"; hold 600; touch "$W/readme-done"
+}
+scene_bartop() { bar_still bartop; }
+scene_barbottom() { bar_still barbottom; }
+scene_barleft() { bar_still barleft; }
+scene_barright() { bar_still barright; }
 scene_grid() {
   # Grid View: a row per desktop group
   place $((CX + 300)) $((MY + 700))

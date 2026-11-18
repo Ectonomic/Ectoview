@@ -1,0 +1,11 @@
+--- a/uninstall.sh	2026-11-17 23:09:31.887358381 -0500
++++ b/uninstall.sh	2026-11-17 23:09:31.894634447 -0500
+@@ -26,7 +26,7 @@
+ # without the shortcut service, saved shortcuts couldn't go back: stop before anything changes
+ need_shortcut_service
+ 
+-turn_off
++true
+ rm -f "$STATE/overview-enabled"
+ if [ "$KEEP" = 0 ]; then
+     # the whole group, written by Ectoview's settings page and install.sh

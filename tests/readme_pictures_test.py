@@ -58,5 +58,25 @@ class ReadmePictures(unittest.TestCase):
             self.assertIn(f'scene_{c["scene"].value}()', SCENES_SH, name)
 
 
+class CutScale(unittest.TestCase):
+    """A cut takes the whole area it names at the scale the frame was filmed at: KWin films an area
+    at the highest scale of the screens it touches (1.75 with the README's dashboard attached), not
+    the main screen's 1.5. Assuming 1.5 cut every picture 17% too close, with its right and bottom
+    edges gone (November 17, 2026)."""
+
+    def test_a_cut_keeps_the_far_corner_at_any_scale(self):
+        import importlib.util
+        from PIL import Image
+        spec = importlib.util.spec_from_file_location('rp', ROOT / 'tools/readme-pictures.py')
+        rp = importlib.util.module_from_spec(spec); spec.loader.exec_module(rp)
+        for scale in (1.5, 1.75, 2):
+            w, h = round(1707 * scale), round(960 * scale)
+            frame = Image.new('RGB', (w, h), (0, 0, 0))
+            frame.paste((255, 0, 0), (w - round(20 * scale), h - round(20 * scale), w, h))
+            cut = rp.cut_area(frame, (0, 0, 1707, 960), 800)
+            corner = cut.getpixel((cut.width - 3, cut.height - 3))
+            self.assertGreater(corner[0], 200, f'at scale {scale}, the far corner of the screen is cut off')
+
+
 if __name__ == '__main__':
     unittest.main()

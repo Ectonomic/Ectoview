@@ -17,7 +17,7 @@
         "Id": "ectoview",
         "License": "GPL-2.0-or-later",
         "Name": "Ectoview",
-        "Version": "0.1.0"
+        "Version": "1.0.0"
     },
     "X-KDE-ConfigModule": "kwin_ectoview_config",
     "X-KDE-Ordering": 70,

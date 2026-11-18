@@ -1,0 +1,11 @@
+--- a/tools/install/common.sh	2026-11-17 23:09:31.898552420 -0500
++++ b/tools/install/common.sh	2026-11-17 23:09:31.906736035 -0500
+@@ -325,7 +325,7 @@
+ }
+ # a turn_on that can't finish leaves Overview as it was, with its keys, and says why
+ turn_on_failed() {
+-    say "Putting Overview back as it was."
++    fail "$1"
+     shortcut_service_up && give_back_shortcuts
+     overview_back
+     rm -f "$STATE/overview-enabled"

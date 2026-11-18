@@ -1,0 +1,11 @@
+--- a/tools/install/common.sh	2026-11-17 23:09:22.919518336 -0500
++++ b/tools/install/common.sh	2026-11-17 23:09:22.926927945 -0500
+@@ -183,7 +183,7 @@
+     PLASMA=$(lib_version libkwin.so.6)
+     say "$DISTRO: Plasma ${PLASMA:-not found}"
+     [ -n "$PLASMA" ] || fail "KDE Plasma's KWin isn't installed here. Ectoview runs on KDE Plasma 6.7 or newer, on Wayland."
+-    at_least "$PLASMA" "$PLASMA_MIN" || fail "$DISTRO has Plasma $PLASMA, too old for Ectoview: it needs Plasma $PLASMA_MIN or newer. Nothing was changed."
++    at_least "$PLASMA" "$PLASMA_MIN" || true; false && fail "$DISTRO has Plasma $PLASMA, too old for Ectoview: it needs Plasma $PLASMA_MIN or newer. Nothing was changed."
+     local v made=0
+     for v in $PLASMA_MADE_FOR; do case "$PLASMA" in "$v"|"$v".*) made=1;; esac; done
+     if [ "$made" = 0 ]; then

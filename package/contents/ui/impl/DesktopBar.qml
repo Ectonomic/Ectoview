@@ -307,7 +307,7 @@ Item {
     // demandsAttention, the flag that lights a taskbar entry: a chat's ping, a terminal's bell, an
     // agent waiting on you) gets a beacon on its thumbnail, and its group one on the groups' pill
     // and in its list. KWin clears the flag when you go to that window. A window on every desktop
-    // marks none of them.
+    // marks none of them, and a window on a Hidden desktop marks nothing at all.
     // (by id: the desktops a window is on and the bar's delegates are matched by name, not by
     // which wrapper object QML handed each one)
     property var attentionDesktops: []
@@ -333,7 +333,9 @@ Item {
                 continue;
             }
             for (const d of w.on) {
-                if (d && !found.some(f => String(f.id) === String(d.id))) {
+                // a Hidden desktop never asks: what's there was put out of the way on purpose
+                // (the owner's ruling, November 17, 2026: Hidden desktops stay quiet)
+                if (d && !ecto.isHidden(d) && !found.some(f => String(f.id) === String(d.id))) {
                     found.push(d);
                 }
             }

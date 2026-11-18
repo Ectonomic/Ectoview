@@ -1,0 +1,10 @@
+--- a/package/contents/ui/impl/Main.qml	2026-11-17 22:51:37.047364678 -0500
++++ b/package/contents/ui/impl/Main.qml	2026-11-17 22:51:37.055800110 -0500
+@@ -7,6 +7,7 @@
+ */
+ 
+ import QtQuick
++import org.kde.ectoview.notthere
+ import Qt5Compat.GraphicalEffects
+ import QtQuick.Layouts
+ import org.kde.kirigami as Kirigami

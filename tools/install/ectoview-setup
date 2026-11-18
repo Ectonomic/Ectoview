@@ -1,0 +1,38 @@
+#!/bin/bash
+# Turn Ectoview on in place of KDE's Overview, or back off. For Ectoview installed from a
+# package, which can't change the settings and shortcuts of the people on a computer.
+#
+#   ectoview-setup on    Overview off and Ectoview on; Overview's shortcuts (Meta+W, Meta+G
+#                        and the cycle keys) move to Ectoview, saved first
+#   ectoview-setup off   Ectoview off; Overview back as it was, with its shortcuts
+#
+# Run it as yourself, in your Plasma session. install.sh and uninstall.sh do the same steps.
+set -euo pipefail
+HERE=$(cd "$(dirname "$(readlink -f "$0")")" && pwd)
+# from the source folder (tools/install) or installed (bin, beside share/ectoview/install)
+LIB=$HERE; [ -f "$LIB/common.sh" ] || LIB=$HERE/../share/ectoview/install
+. "$LIB/common.sh"
+[ "$(id -u)" != 0 ] || fail "run this as yourself, not as root: Ectoview's settings and shortcuts belong to one person"
+SHORTCUTS=1
+case "${1:-}" in
+    on)
+        mkdir -p "$STATE"
+        turn_on
+        step "Done"
+        say "Meta+W opens Ectoview. ectoview-setup off puts Overview back."
+        ;;
+    off)
+        [ -f "$STATE/overview-enabled" ] || fail "Ectoview isn't turned on for you (no record in $STATE)"
+        turn_off
+        rm -f "$STATE/overview-enabled"
+        # a source install keeps its own records; otherwise the folder held only this command's
+        if [ ! -f "$STATE/prefix" ]; then
+            rm -f "$STATE"/*
+            rmdir "$STATE"
+        fi
+        step "Done"
+        say "Overview is back."
+        ;;
+    -h|--help) sed -n '2,10p' "$0" | sed 's/^# \{0,1\}//';;
+    *) sed -n '2,10p' "$0" | sed 's/^# \{0,1\}//'; exit 2;;
+esac

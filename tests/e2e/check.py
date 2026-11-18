@@ -392,7 +392,7 @@ elif scenario in ('arrows', 'plant-arrows'):
     check("the group's first desktop has no <: a window held there switches nothing",
           line('held previous on first').endswith('current Work'), line('held previous on first'))
     # each switch while Dolphin is held on >, after it arrived: the first after the pause, the next
-    # after another as long (his ruling: not almost at once), none past the group's last desktop
+    # after another as long (the owner's ruling: not almost at once), none past the group's last desktop
     arrived = int(line('arrived') or 0)
     times = [(n, int(t)) for n, t in re.findall(r'(\w+) (\d+);', line('switches'))]
     held = [(n, t) for n, t in times if t >= arrived]
@@ -541,6 +541,15 @@ elif scenario in ('beacons', 'plant-beacons'):
         check("when only the shown group asks, the pill's beacon goes and the desktop's stays", one_pill == 0 and one_code >= 6, f'pill {one_pill}, Code {one_code}')
         none = orange('none.png', *tile(1)) + orange('none.png', *pill)
         check('when nothing asks, no beacons', none == 0, f'{none} attention pixels left')
+        # a window on a Hidden desktop asks: nothing lights (the owner's ruling, 2026-11-17: Hidden
+        # desktops stay quiet; proven on the build that lit them: pill 144, Hidden row 104)
+        if (out / 'hidden.png').exists() and (out / 'hidden-list.png').exists():
+            h_pill = orange('hidden.png', *pill)
+            h_row = orange('hidden-list.png', rows[0], 176 + 4 + 30 + 44 * 2 + 9, rows[1], 176 + 4 + 30 + 44 * 3 + 9)
+            check("a window asking on a Hidden desktop lights nothing: not the groups' pill, not the Hidden row",
+                  h_pill == 0 and h_row == 0, f'pill {h_pill}, Hidden row {h_row}')
+        else:
+            check('the Hidden beacon pictured', False, 'no hidden.png or hidden-list.png')
     else:
         check('the beacons pictured', False, 'no pictures or places')
 elif scenario == 'terminalbeacon':

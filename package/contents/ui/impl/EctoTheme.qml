@@ -58,7 +58,7 @@ QtObject {
     readonly property real controlPadding: 10
     readonly property real fontSize: 13
     readonly property real smallFontSize: 12
-    // desktop previews keep small corners (his ask, 2026-11-12: "way smaller"); menus keep 12
+    // desktop previews keep small corners (the owner's ask, 2026-11-12: much smaller); menus keep 12
     readonly property real thumbRadius: 4
     readonly property real viewRadius: 6
     readonly property real gridRadius: 4

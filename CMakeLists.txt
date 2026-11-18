@@ -5,7 +5,7 @@
 # The effect itself is package/, QML only, installed with kpackagetool6 (install.sh).
 
 cmake_minimum_required(VERSION 3.22)
-project(ectoview VERSION 0.1.0 LANGUAGES CXX)
+project(ectoview VERSION 1.0.0 LANGUAGES CXX)
 
 set(QT_MIN_VERSION 6.6.0)
 set(KF_MIN_VERSION 6.0.0)
@@ -27,11 +27,14 @@ add_subdirectory(icons)
 
 feature_summary(WHAT ALL FATAL_ON_MISSING_REQUIRED_PACKAGES)
 
-# tests/unit: the settings page against what reads its settings (run with tests/unit/run_settings_test.sh)
-include(ECMAddTests)
-find_package(Qt6 ${QT_MIN_VERSION} REQUIRED COMPONENTS Test)
-ecm_add_test(tests/unit/settings_test.cpp
-    TEST_NAME settings_test
-    LINK_LIBRARIES Qt6::Test Qt6::Widgets Qt6::DBus KF6::KCMUtils KF6::ConfigCore KF6::CoreAddons)
-target_compile_definitions(settings_test PRIVATE PLUGIN_DIR="${CMAKE_BINARY_DIR}/bin" SOURCE_DIR="${CMAKE_SOURCE_DIR}")
-add_dependencies(settings_test kwin_ectoview_config)
+# tests/unit: the settings page against what reads its settings (run with tests/unit/run_settings_test.sh);
+# install.sh and the package build without them (BUILD_TESTING=OFF), so Qt's test library isn't needed
+if(BUILD_TESTING)
+    include(ECMAddTests)
+    find_package(Qt6 ${QT_MIN_VERSION} REQUIRED COMPONENTS Test)
+    ecm_add_test(tests/unit/settings_test.cpp
+        TEST_NAME settings_test
+        LINK_LIBRARIES Qt6::Test Qt6::Widgets Qt6::DBus KF6::KCMUtils KF6::ConfigCore KF6::CoreAddons)
+    target_compile_definitions(settings_test PRIVATE PLUGIN_DIR="${CMAKE_BINARY_DIR}/bin" SOURCE_DIR="${CMAKE_SOURCE_DIR}")
+    add_dependencies(settings_test kwin_ectoview_config)
+endif()

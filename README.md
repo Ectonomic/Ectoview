@@ -50,7 +50,7 @@ biggest first. Each links to its section.
 | [Carry a window to another desktop](#carry-a-window-to-another-desktop) | Drop it on a desktop in the bar | Also hold it on the < or > beside the big view: after a pause the view moves on, carrying the window |
 | [Group shortcuts with Ectoview closed](#step-through-groups) | — | The new group's desktop rises in where you are, instead of the screen sliding sideways past every desktop between |
 | [Many desktops](#many-desktops) | The row scrolls when flicked, cut off sharply at its ends | < and > page along the row, and its ends fade into the backdrop |
-| [Your screens](#your-screens) | On every screen | On every screen, or only its windows on the others, or the others left exactly as they are: for a screen you keep as a dashboard |
+| [Your screens](#your-screens) | Opens on every screen | In full on the primary screen; your other screens can show the same, only their own windows, or nothing at all, for a screen you keep as a dashboard |
 | [The scroll wheel](#the-scroll-wheel-and-clicks) | Switches desktops anywhere, even while Overview closes | Switches desktops only over the bar, and never while Ectoview closes |
 | [Clicks that mean it](#the-scroll-wheel-and-clicks) | A click on the backdrop closes Overview | Only a click on a desktop or a window takes you somewhere; the backdrop and a faded arrow do nothing |
 | [Ecto's look, or KDE's](#ectos-look-or-kdes) | Your KDE colors | Ecto's dark look in Geist, or your KDE colors and font, with an accent of your choice and how dark the backdrop gets |
@@ -127,7 +127,8 @@ flag that makes a window's taskbar entry light up, so any app that asks for you 
 desktop's dot, whatever the app. The dot goes out when you go to the window.
 
 A desktop in a group you aren't looking at lights the groups' button, and its group's row
-in the list.
+in the list. Hidden desktops stay quiet: what you put there was put out of the way, so it
+lights nothing.
 
 <p align="center">
   <img src="docs/pictures/readme-beacons.webp" width="70%" alt="Ectoview open on the Work group. A window on Review asks for attention and the dot beside Review lights, a ring swelling from it. A window on Chat, in the Play group, asks too, and a dot lights on the groups' button. The list opens: Work and Play each have a lit dot beside their names">
@@ -172,9 +173,14 @@ switch to.
 
 ## Your screens
 
-Overview opens on every screen. Ectoview can, too, or on your other screens it can lay out
-only that screen's windows, or leave the other screens exactly as they are, for one you
-keep as a dashboard. A click on a screen left as it is closes Ectoview.
+Ectoview always opens in full on your primary screen. For your other screens, its settings
+give you three choices:
+
+- **All of Ectoview,** the same as on the primary screen. This is what Overview does.
+- **Only their windows:** each screen spreads out its own windows, without the desktop bar
+  or the toolbar.
+- **Nothing:** the screen stays exactly as it is, so a screen you keep as a dashboard is
+  never covered. Clicks there do nothing until Ectoview closes.
 
 <p align="center">
   <img src="docs/pictures/readme-screens.webp" width="100%" alt="Two screens: a smaller one on the left showing a day's notes, and the main one. Ectoview opens on the main screen only; the notes screen stays exactly as it was">
@@ -205,6 +211,17 @@ how dark the backdrop gets.
 The bar goes along the top, bottom, left or right, and the toolbar can go: then the groups'
 button and the gear sit at the bar's end.
 
+<table>
+  <tr>
+    <td width="50%"><img src="docs/pictures/readme-bar-top.webp" width="100%" alt="The desktop bar along the top of the screen, with the toolbar under it: the groups' button, the search field and the gear"><br><sub><b>Top,</b> with the toolbar</sub></td>
+    <td width="50%"><img src="docs/pictures/readme-bar-bottom.webp" width="100%" alt="The desktop bar along the bottom of the screen; the toolbar stays at the top"><br><sub><b>Bottom,</b> with the toolbar at the top</sub></td>
+  </tr>
+  <tr>
+    <td width="50%"><img src="docs/pictures/readme-bar-left.webp" width="100%" alt="The desktop bar down the left side without the toolbar: the groups' button and the gear at the bar's end"><br><sub><b>Left,</b> without the toolbar</sub></td>
+    <td width="50%"><img src="docs/pictures/readme-bar-right.webp" width="100%" alt="The desktop bar down the right side without the toolbar: the groups' button and the gear at the bar's end"><br><sub><b>Right,</b> without the toolbar</sub></td>
+  </tr>
+</table>
+
 ## Settings
 
 The gear beside the search field opens Ectoview's settings, also in System Settings under
@@ -221,16 +238,35 @@ your desktops are in sight.
 
 ## Status
 
-Ectoview 0.1, on KDE Plasma 6.7 (KWin 6.7.5) on Wayland. It's tested in a private,
-off-screen KWin, never on the desktop you're using: every feature above has a scenario that
-drives it with a real pointer and keys and checks what's drawn. What isn't done yet is in
+Ectoview 1.0, for KDE Plasma 6.7 and 6.8 on Wayland. It's tested in a private, off-screen
+KWin, never on the desktop you're using: every feature above has a scenario that drives it
+with a real pointer and keys and checks what's drawn, on Plasma 6.7 and, in a container,
+on Plasma 6.8. Installing and removing it are checked as a new user on Fedora, openSUSE
+Tumbleweed, Arch, Debian testing and KDE neon. What isn't done yet is in
 [docs/deferred.md](docs/deferred.md).
 
 ## Installing
 
-You need KDE Plasma 6.7 on Wayland, and to build the settings page CMake, KDE's Extra CMake
-Modules and the development files for Qt 6 and KDE Frameworks 6 (Config, ConfigWidgets,
-CoreAddons, GlobalAccel, I18n, KCMUtils, WidgetsAddons, XmlGui).
+### Fedora: the package
+
+On Fedora 44 and 45, install the package from COPR, then turn Ectoview on in your Plasma
+session:
+
+```bash
+sudo dnf copr enable omgrant/ectoview
+sudo dnf install ectoview
+ectoview-setup on
+```
+
+`ectoview-setup on` turns Overview off and Ectoview on, and moves Overview's shortcuts
+(Meta+W, Meta+G and the cycle keys) to Ectoview. `ectoview-setup off` puts Overview back,
+with its shortcuts; run it before `sudo dnf remove ectoview`.
+
+### Any distribution: from source
+
+You need KDE Plasma 6.7 or newer on Wayland. `install.sh` checks, then finds what the build
+needs and shows your package manager's command to install it, running it only if you say
+yes (it knows Fedora, openSUSE, Arch, Debian, Ubuntu and KDE neon):
 
 ```bash
 git clone https://github.com/Ectonomic/Ectoview.git
@@ -238,10 +274,11 @@ cd Ectoview
 ./install.sh
 ```
 
-`install.sh`, with no root:
+`install.sh`, with no root but for that one package command:
 
 1. builds the settings page and installs it under `~/.local`;
-2. installs the effect into `~/.local/share/kwin-wayland/effects/ectoview`;
+2. installs the effect where your KWin looks for it, in `~/.local/share/kwin/effects`
+   (`kwin-wayland/effects` on Plasma 6.7);
 3. tells the Plasma session where the settings page is, so System Settings finds it after
    you log out and in once (the gear finds it straight away);
 4. turns Overview off and Ectoview on, carrying Overview's settings over;
@@ -262,6 +299,12 @@ Ectoview, no logging out. `./uninstall.sh` puts Overview back, with its shortcut
   tests/e2e/run.sh OUT`. Each scenario checks what's drawn and what KWin holds, and fails on
   a QML error or a black screen. Planted faults (`SCENARIO=plant-…`) prove the checks catch
   what they guard.
+- `tests/e2e/container.sh OUT SCENARIO …` runs the same scenarios inside a Fedora container,
+  on that distribution's Plasma (6.8 on Fedora 44).
+- `tests/install/stranger-check.sh` installs and removes Ectoview as a new user in clean
+  containers of Fedora, openSUSE Tumbleweed, Arch, Debian and KDE neon, and checks that a
+  Plasma older than 6.7 is refused with nothing changed; `tests/install/rpm-check.sh`
+  builds the Fedora package as COPR does and checks it the same way.
 - `tools/readme-pictures.sh` films this README's pictures in that same headless KWin.
 
 ## Staying close to KDE

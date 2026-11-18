@@ -25,7 +25,14 @@ KWinComponents.SceneEffect {
         if (impl && impl.objectName === build) {
             return;
         }
-        const component = Qt.createComponent(Qt.resolvedUrl(build + "/Effect.qml"));
+        let component = Qt.createComponent(Qt.resolvedUrl(build + "/Effect.qml"));
+        // a build this install doesn't have (Build left in kwinrc by an earlier install from
+        // source, under a package that carries its views in impl/): the views it does have.
+        // Only for a missing folder; any other error is the build's own, and is reported.
+        if (component.status !== Component.Ready && build !== "impl" && /No such file/.test(component.errorString())) {
+            console.info("Ectoview: no build " + build + " here; loading impl");
+            component = Qt.createComponent(Qt.resolvedUrl("impl/Effect.qml"));
+        }
         if (component.status !== Component.Ready) {
             console.warn("Ectoview: couldn't load build " + build + ": " + component.errorString());
             return;

@@ -22,5 +22,11 @@ cat > "$W/session.conf" <<CONF
 <servicedir>$W/services</servicedir><policy context="default"><allow send_destination="*" eavesdrop="true"/><allow eavesdrop="true"/><allow own="*"/></policy></busconfig>
 CONF
 DRI=(); for n in /sys/class/drm/renderD* /sys/class/drm/card[0-9]; do [ "$(cat $n/device/vendor 2>/dev/null)" = 0x10de ] || DRI+=(--dev-bind /dev/dri/$(basename $n) /dev/dri/$(basename $n)); done
-timeout ${TIMEOUT:-240} bwrap --dev-bind / / --unshare-pid --proc /proc --die-with-parent --tmpfs /dev/dri "${DRI[@]}" --tmpfs /run/systemd/journal -- dbus-run-session --config-file="$W/session.conf" -- "$HERE/inner.sh" "$W" "$OUT" "$PKG"
+if [ -n "${E2E_IN_CONTAINER:-}" ]; then
+    # inside tests/e2e/container.sh's container, which already keeps the test apart (its own
+    # processes, devices and journal) and where bwrap can't make namespaces of its own
+    timeout ${TIMEOUT:-240} dbus-run-session --config-file="$W/session.conf" -- "$HERE/inner.sh" "$W" "$OUT" "$PKG"
+else
+    timeout ${TIMEOUT:-240} bwrap --dev-bind / / --unshare-pid --proc /proc --die-with-parent --tmpfs /dev/dri "${DRI[@]}" --tmpfs /run/systemd/journal -- dbus-run-session --config-file="$W/session.conf" -- "$HERE/inner.sh" "$W" "$OUT" "$PKG"
+fi
 python3 -I "$HERE/check.py" "$OUT" "${SCENARIO:-smoke}"

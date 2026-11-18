@@ -49,6 +49,7 @@ OtherScreens=$OTHER
 $(printf '%b' "${EXTRA_EFFECT_CONFIG:-}")
 $([ -n "$README" ] && readme_groups)
 $([ "$SCENARIO" = readme-kdelook ] && printf 'Look=1\nAccent=1\n')
+$(case "$SCENARIO" in readme-bartop) printf 'BarPosition=0\n';; readme-barbottom) printf 'BarPosition=1\n';; readme-barleft) printf 'BarPosition=2\nShowToolbar=false\n';; readme-barright) printf 'BarPosition=3\nShowToolbar=false\n';; esac)
 $([ "$SCENARIO" = crossscreen ] && printf 'Groups=desktops:Desktops,g1:Games\nDesktopGroups=d1=desktops,d2=desktops,d3=g1,d4=g1\n')
 $(case "$SCENARIO" in arrows|plant-arrows|arrowsback) printf 'Groups=desktops:Desktops,g1:Games\nDesktopGroups=d1=desktops,d2=desktops,d3=desktops,d4=g1\n';; esac)
 $([ "$SCENARIO" = gridgroups ] && printf 'Groups=desktops:Desktops,g1:Games\nDesktopGroups=d1=desktops,d2=desktops,d3=g1,d4=hidden\n')
@@ -147,10 +148,14 @@ X-KDE-Wayland-Interfaces=org_kde_kwin_fake_input
 DESK
 
 QT_FORCE_STDERR_LOGGING=1 QT_LOGGING_RULES="js.debug=true;kwin_scripting.debug=true;qml.debug=true;${EXTRA_LOG_RULES:-}" \
-  kwin_wayland --virtual --width "$([ -n "$README" ] && echo 2560 || echo 3440)" --height 1440 --output-count 2 --socket ectoview --no-lockscreen > "$OUT/kwin.log" 2>&1 &
+  ${KWIN_BIN:-kwin_wayland} --virtual --width "$([ -n "$README" ] && echo 2560 || echo 3440)" --height 1440 --output-count 2 --socket ectoview --no-lockscreen > "$OUT/kwin.log" 2>&1 &
 KW=$!
 for i in $(seq 100); do [ -S "$W/rt/ectoview" ] && break; sleep 0.1; done
 export XDG_CURRENT_DESKTOP=KDE KDE_FULL_SESSION=true KDE_SESSION_VERSION=6 WAYLAND_DISPLAY=ectoview QT_QPA_PLATFORM=wayland QT_QPA_PLATFORMTHEME=kde QT_QUICK_CONTROLS_STYLE=org.kde.desktop
+# services D-Bus starts from now on get the session's display too, as a Plasma session passes it on at
+# login (KDE's activity manager 6.8 aborts without one, and Plasma's shell then loads no desktop)
+gdbus call --session --dest org.freedesktop.DBus --object-path /org/freedesktop/DBus --method org.freedesktop.DBus.UpdateActivationEnvironment \
+  "{'WAYLAND_DISPLAY': '$WAYLAND_DISPLAY', 'QT_QPA_PLATFORM': 'wayland', 'XDG_CURRENT_DESKTOP': 'KDE', 'KDE_FULL_SESSION': 'true', 'KDE_SESSION_VERSION': '6'}" > /dev/null 2>&1 || true
 sleep 1
 # the main screen right and primary; the dashboard screen left, scaled 1.75, bottoms lined up
 LS=${LEFT_SCALE:-1.75}; echo "$LS" > "$OUT/left-scale.txt"
@@ -159,8 +164,10 @@ if [ -n "$README" ]; then
   LW=$(python3 -c "print(round(2560/$LS))"); LH=$(python3 -c "print(round(1440/$LS))")
   kscreen-doctor output.Virtual-1.scale.1.5 output.Virtual-0.scale.$LS output.Virtual-0.position.0,$((960 - LH)) output.Virtual-1.position.$LW,0 output.Virtual-1.priority.1 output.Virtual-0.priority.2 >> "$OUT/layout.log" 2>&1
 else
+# MAIN_SCALE: the main screen at a scale of its own (1 when unset), bottoms still lined up
+MS=${MAIN_SCALE:-1}; MH=$(python3 -c "print(round(1440/$MS))")
 LW=$(python3 -c "print(round(3440/$LS))"); LH=$(python3 -c "print(round(1440/$LS))")
-kscreen-doctor output.Virtual-0.scale.$LS output.Virtual-0.position.0,$((1440 - LH)) output.Virtual-1.position.$LW,0 output.Virtual-1.priority.1 output.Virtual-0.priority.2 >> "$OUT/layout.log" 2>&1
+kscreen-doctor $([ "$MS" != 1 ] && echo output.Virtual-1.scale.$MS) output.Virtual-0.scale.$LS output.Virtual-0.position.0,$((MH - LH)) output.Virtual-1.position.$LW,0 output.Virtual-1.priority.1 output.Virtual-0.priority.2 >> "$OUT/layout.log" 2>&1
 fi
 kscreen-doctor -o >> "$OUT/layout.log" 2>&1
 shot() { spectacle --background --nonotify --fullscreen --output "$1" >> "$OUT/shots.log" 2>&1; }
@@ -170,7 +177,20 @@ script() { # a KWin script given as text; its print() lands in kwin.log as "js: 
   qdbus org.kde.KWin "/Scripting/Script$id" org.kde.kwin.Script.run >/dev/null; sleep 0.5
 }
 kglob() { qdbus org.kde.kglobalaccel /component/kwin invokeShortcut "$1" >> "$OUT/shortcuts.log" 2>&1; }
+# until KWin says Ectoview has finished closing and the desktop switch's slide is over (a shortcut
+# pressed while either runs doesn't open Ectoview; a slower machine, such as tests/e2e/container.sh's,
+# finishes later)
+wait_closed() { local i; for i in $(seq 50); do qdbus org.kde.KWin /Effects org.kde.kwin.Effects.activeEffects 2>/dev/null | grep -qxE 'ectoview|slide' || return 0; sleep 0.1; done; }
 
+# KDE's activity manager first, as a Plasma session starts it (systemd's plasma-kactivitymanagerd)
+# before the shell: the shell loads no desktop without it
+for kamd in /usr/libexec/kactivitymanagerd /usr/lib/*/libexec/kactivitymanagerd /usr/lib/kactivitymanagerd; do
+  [ -x "$kamd" ] || continue
+  gdbus call --session --dest org.freedesktop.DBus --object-path /org/freedesktop/DBus --method org.freedesktop.DBus.NameHasOwner org.kde.ActivityManager 2>/dev/null | grep -q true \
+    || { "$kamd" > "$OUT/kactivitymanagerd.log" 2>&1 & }
+  for i in $(seq 50); do gdbus call --session --dest org.freedesktop.DBus --object-path /org/freedesktop/DBus --method org.freedesktop.DBus.NameHasOwner org.kde.ActivityManager 2>/dev/null | grep -q true && break; sleep 0.1; done
+  break
+done
 plasmashell --no-respawn > "$OUT/plasmashell.log" 2>&1 &
 sleep 6
 mkdir -p "$HOME/Documents/Notes" "$HOME/Music" "$HOME/Pictures" "$HOME/Projects" "$HOME/Downloads"
@@ -246,7 +266,7 @@ primary|plant-primary|every)
   sleep 1
   shot "$OUT/desktop.png"
   kglob "Ectoview"; sleep 2.5; shot "$OUT/overview.png"
-  # a click on the left (dashboard) screen: closes Ectoview when it's left alone
+  # a click on the left (dashboard) screen: when it's left alone, the click does nothing and Ectoview stays open
   feed "move 900 1100"; sleep 0.3; feed "click"; sleep 1.5; shot "$OUT/after-click.png"
   ;;
 windows|plant-windows)
@@ -375,8 +395,10 @@ gridgroups)
   read X Y < <(cell 2 3 2 0); feed "move $X $Y"; sleep 0.4; feed "click"; sleep 1.5
   log "clicked music: $(order) groups=$(rc DesktopGroups)"
   # back on Work; drag Code (row 0, column 1) into Games' row (onto Design): Code joins Games, after Design
-  script 'workspace.currentDesktop = workspace.desktops[0];'; sleep 0.6
+  script 'workspace.currentDesktop = workspace.desktops[0];'; sleep 0.6; wait_closed
+  log "before grid: active=$(qdbus org.kde.KWin /Effects org.kde.kwin.Effects.activeEffects 2>/dev/null | tr '\n' ' ') $(order)"
   kglob "Ectoview Grid View"; sleep 2.5
+  log "after grid: active=$(qdbus org.kde.KWin /Effects org.kde.kwin.Effects.activeEffects 2>/dev/null | tr '\n' ' ')"
   read X1 Y1 < <(cell 2 2 0 1); read X2 Y2 < <(cell 2 2 1 0)
   feed "move $X1 $Y1"; sleep 0.4; feed "down"; sleep 0.2
   for f in 0.1 0.25 0.4 0.55 0.7 0.85 1; do feed "move $(python3 -c "print(round($X1+($X2-$X1)*$f), round($Y1+($Y2-$Y1)*$f))")"; sleep 0.1; done
@@ -505,6 +527,14 @@ beacons|plant-beacons)
   feed "move $((PR - 101)) 153"; sleep 0.3; feed "click"; sleep 0.8
   attention konsole 2 false; sleep 0.8; shot "$OUT/one.png"
   attention kate 1 false; sleep 0.8; shot "$OUT/none.png"
+  kglob "Ectoview"; sleep 1.5
+  # a window on a Hidden desktop (Music) asks: nothing lights, not the groups' pill nor the Hidden
+  # row in its list (the owner's ruling, November 17, 2026: Hidden desktops stay quiet)
+  attention kate 3 true
+  kglob "Ectoview"; sleep 2.5; shot "$OUT/hidden.png"
+  feed "move $((PR - 101)) 153"; sleep 0.3; feed "click"; sleep 1; shot "$OUT/hidden-list.png"
+  feed "key 1"; sleep 0.5
+  attention kate 3 false
   log "places: mx=$MX mw=$MW cx=$CX pr=$PR"
   kglob "Ectoview"; sleep 1.5
   ;;
@@ -854,6 +884,8 @@ searchall)
   # Konsole goes to Code; Ectoview opens on Work
   script 'for (const w of workspace.stackingOrder) if (w.resourceClass.indexOf("konsole") >= 0) w.desktops = [workspace.desktops[1]];'
   sleep 0.5
+  script 'print("captions " + workspace.stackingOrder.filter(w => w.normalWindow).map(w => w.caption + " @" + w.desktops.map(d => d.name)).join(" | "));'
+  log "$(grep -o 'js: captions .*' "$OUT/kwin.log" | tail -1 | sed 's/js: //')"
   kglob "Ectoview"; sleep 2.5
   typeit() { for k in 18 46 20 24 47 23 18 17; do feed "key $k"; sleep 0.12; done; }   # "ectoview"
   typeit; sleep 2; shot "$OUT/this.png"

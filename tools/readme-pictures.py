@@ -7,15 +7,17 @@
 #   still cuts:  a still WebP, the film's frame nearest AT seconds (or the scene's still)
 #   reveal cuts: an animated WebP of two stills, BEFORE (KDE's Overview) and AT (Ectoview), with a
 #                divider sweeping from one to the other and back, each side labeled
-# Areas are in the filmed screen's own coordinates (the main screen, 1707×960; the frames are 1.5
-# times that).
+# Areas are in the filmed screen's own coordinates (the main screen, 1707×960). A frame's scale is
+# read from its height (every film is 960 tall): KWin captures an area at the highest scale of the
+# screens it touches, so a film taken while a 1.75 screen is attached comes out at 1.75, not the
+# main screen's 1.5 (assuming 1.5 cut every picture 17% too close, November 17, 2026).
 # usage: tools/readme-pictures.py FILMS_DIR OUT_DIR [CUT ... | --scenes SCENE ...]
 import os, sys, zlib
 import numpy as np
 from PIL import Image, ImageChops, ImageDraw, ImageFilter, ImageFont
 
 HERE = os.path.dirname(os.path.abspath(__file__))
-SCALE = 1.5
+FILM_HEIGHT = 960
 FONT = os.path.join(HERE, '..', 'package', 'contents', 'fonts', 'Geist-Medium.ttf')
 
 FULL = (0, 0, 1707, 960)
@@ -42,6 +44,10 @@ CUTS = {
     'readme-screens': {'scene': 'screens', 'kind': 'moving', 'area': (0, 0, 3170, 960), 'from': 0, 'to': None, 'width': 1600},
     'readme-ecto-look': {'scene': 'hero', 'kind': 'still', 'area': TOP, 'at': ('open', 1.2), 'width': 1107},
     'readme-kde-look': {'scene': 'kdelook', 'kind': 'still', 'area': TOP, 'at': None, 'width': 1107},
+    'readme-bar-top': {'scene': 'bartop', 'kind': 'still', 'area': FULL, 'at': None, 'width': 800},
+    'readme-bar-bottom': {'scene': 'barbottom', 'kind': 'still', 'area': FULL, 'at': None, 'width': 800},
+    'readme-bar-left': {'scene': 'barleft', 'kind': 'still', 'area': FULL, 'at': None, 'width': 800},
+    'readme-bar-right': {'scene': 'barright', 'kind': 'still', 'area': FULL, 'at': None, 'width': 800},
     'readme-grid': {'scene': 'grid', 'kind': 'still', 'area': FULL, 'at': None, 'width': 1600},
     'readme-overflow': {'scene': 'overflow', 'kind': 'moving', 'area': (0, 0, 1707, 260), 'from': 0, 'to': None, 'width': 1600},
 }
@@ -108,7 +114,8 @@ def keycap(im, words, strength):
 
 
 def cut_area(im, area, width):
-    x, y, w, h = (round(v * SCALE) for v in area)
+    scale = im.height / FILM_HEIGHT
+    x, y, w, h = (round(v * scale) for v in area)
     im = im.crop((x, y, min(im.width, x + w), min(im.height, y + h)))
     if width and im.width != width:
         im = im.resize((width, round(im.height * width / im.width)), Image.LANCZOS)
