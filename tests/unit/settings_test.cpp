@@ -25,7 +25,7 @@
 #include <QTabWidget>
 #include <QTreeView>
 #include <QTreeWidget>
-#include <QListWidget>
+#include <QLabel>
 #include <QPushButton>
 #include <QRadioButton>
 #include <QSlider>
@@ -271,6 +271,22 @@ private Q_SLOTS:
                  qPrintable(shown.join(QStringLiteral(" | "))));
     }
 
+    // the settings window's name and icon come from the module's own description, read as kcmshell6
+    // reads it (no allowance for an empty one), and its icon and desktop entry are in the source
+    void windowGetsEctoviewsNameAndIcon()
+    {
+        const KPluginMetaData data(QStringLiteral("kwin/effects/configs/kwin_ectoview_config"));
+        QVERIFY2(data.isValid(), "the settings module carries no description: kcmshell6 names its window \"kcmshell6\" with no icon");
+        QCOMPARE(data.name(), QStringLiteral("Ectoview"));
+        QCOMPARE(data.iconName(), QStringLiteral("ectoview"));
+        for (const char *size : {"sc", "16", "22", "24", "32", "48", "64"}) {
+            QVERIFY2(QFile::exists(QStringLiteral(SOURCE_DIR "/icons/%1-apps-%2.svg").arg(QLatin1String(size), data.iconName())), size);
+        }
+        QFile entry(QStringLiteral(SOURCE_DIR "/kcm/%1.desktop").arg(data.pluginId()));
+        QVERIFY2(entry.open(QIODevice::ReadOnly), "no desktop entry under the name kcmshell6 gives the window");
+        QVERIFY(QString::fromUtf8(entry.readAll()).contains(QStringLiteral("\nIcon=") + data.iconName() + QLatin1Char('\n')));
+    }
+
     void startsAtTheDefaults()
     {
         QVERIFY(radio(QStringLiteral("All of Ectoview, like the primary screen"))->isChecked());
@@ -316,90 +332,67 @@ private Q_SLOTS:
         QVERIFY(!m_module->needsSave());
     }
 
-    QComboBox *picker(const QString &desktopId)
-    {
-        return find<QComboBox>(QStringLiteral("group-") + desktopId);
-    }
     QStringList entry(const QString &key)
     {
         return group(QStringLiteral("Effect-ectoview")).readEntry(key.toUtf8().constData(), QStringList());
     }
-    QPushButton *button(const QString &text)
-    {
-        const auto all = m_module->widget()->findChildren<QPushButton *>();
-        for (QPushButton *b : all) {
-            if (b->text().remove(QLatin1Char('&')) == text) {
-                return b;
-            }
-        }
-        qFatal("no button '%s'", qPrintable(text));
-        return nullptr;
-    }
 
-    void hiddenDesktopsFromBeforeGroupsBecomeTheHiddenGroup()
+    void primaryScreenOnlyFromBeforeIsCarriedOver()
     {
-        // a kwinrc from the build before groups: HiddenDesktops holds Chat 1's id
+        // a kwinrc from before the three choices: "only the primary screen"
         KConfigGroup old = group(QStringLiteral("Effect-ectoview"));
-        old.writeEntry("HiddenDesktops", QStringList{QStringLiteral("c1")});
         old.writeEntry("PrimaryScreenOnly", true);
         old.deleteEntry("OtherScreens");
         old.sync();
         m_module->load();
         QVERIFY2(radio(QStringLiteral("Nothing: they stay as they are"))->isChecked(), "\"only the primary screen\" from before didn't become \"they stay as they are\"");
-        QCOMPARE(picker(QStringLiteral("c1"))->currentData().toString(), QStringLiteral("hidden"));
-        QCOMPARE(picker(QStringLiteral("w1"))->currentData().toString(), QStringLiteral("desktops"));
-        // (shown as it is, not as a change: Ectoview carries the list over itself; saving writes the new form)
         m_module->save();
-        QCOMPARE(entry(QStringLiteral("DesktopGroups")), QStringList{QStringLiteral("c1=hidden")});
-        QVERIFY(entry(QStringLiteral("HiddenDesktops")).isEmpty());
-        QVERIFY(entry(QStringLiteral("Groups")).isEmpty());
         QCOMPARE(group(QStringLiteral("Effect-ectoview")).readEntry("OtherScreens", 0), 2);
         QVERIFY(!group(QStringLiteral("Effect-ectoview")).readEntry("PrimaryScreenOnly", false));
     }
 
-    void groupsAreMadeNamedAndSavedForEctoview()
+    // desktop groups are made and changed in Ectoview only (the settings page's tab for them came
+    // out November 17, 2026): the page shows no group controls, only where to find them, and never
+    // writes Groups, DesktopGroups or HiddenDesktops, even after Ectoview changed them under it
+    void groupsAreEctoviewsAlone()
     {
-        auto list = find<QListWidget>(QStringLiteral("groupList"));
-        // Desktops, then Hidden (fixed, last)
-        QCOMPARE(list->count(), 2);
-        button(QStringLiteral("Add"))->click();
-        QCOMPARE(list->count(), 3);
-        list->item(1)->setText(QStringLiteral("Games"));
-        QCoreApplication::processEvents();
-        const int games = picker(QStringLiteral("c0"))->findText(QStringLiteral("Games"));
-        QVERIFY2(games >= 0, "a desktop's picker doesn't offer the new group");
-        picker(QStringLiteral("c0"))->setCurrentIndex(games);
-        QVERIFY(m_module->needsSave());
-        m_module->save();
+        const auto tabs = find<QTabWidget>(QStringLiteral("tabs"));
+        QStringList names;
+        for (int i = 0; i < tabs->count(); ++i) {
+            names.append(tabs->tabText(i).remove(QLatin1Char('&')));
+        }
+        QCOMPARE(names, (QStringList{QStringLiteral("General"), QStringLiteral("Shortcuts")}));
+        QVERIFY(find<QLabel>(QStringLiteral("groupsHint"))->text().contains(QStringLiteral("in Ectoview itself")));
 
-        const QStringList groups = entry(QStringLiteral("Groups"));
-        QCOMPARE(groups.size(), 2);
-        QCOMPARE(groups[0], QStringLiteral("desktops:Desktops"));
-        QVERIFY2(groups[1].endsWith(QStringLiteral(":Games")), qPrintable(groups.join(QLatin1Char(','))));
-        const QString gamesId = groups[1].section(QLatin1Char(':'), 0, 0);
-        // every desktop is written with its group, so reordering groups never moves one
-        QCOMPARE(entry(QStringLiteral("DesktopGroups")),
-                 (QStringList{QStringLiteral("w1=desktops"), QStringLiteral("c0=") + gamesId, QStringLiteral("c1=hidden")}));
-
+        const QStringList groups = {QStringLiteral("g1:Work"), QStringLiteral("g2:Games")};
+        const QStringList members = {QStringLiteral("w1=g1"), QStringLiteral("c0=g2"), QStringLiteral("c1=hidden")};
+        const QStringList hidden = {QStringLiteral("c9")};
+        KConfigGroup ectoview = group(QStringLiteral("Effect-ectoview"));
+        ectoview.writeEntry("Groups", groups);
+        ectoview.writeEntry("DesktopGroups", members);
+        ectoview.writeEntry("HiddenDesktops", hidden);
+        ectoview.sync();
         m_module->load();
-        QCOMPARE(picker(QStringLiteral("c0"))->currentText(), QStringLiteral("Games"));
-        QCOMPARE(picker(QStringLiteral("c1"))->currentData().toString(), QStringLiteral("hidden"));
-        QVERIFY(!m_module->needsSave());
-
-        // Move Up puts Games first; Code stays in Games and Work in Desktops
-        list->setCurrentRow(1);
-        button(QStringLiteral("Move Up"))->click();
+        find<QComboBox>(QStringLiteral("kcfg_Look"))->setCurrentIndex(0);
+        find<QSlider>(QStringLiteral("kcfg_BackgroundDim"))->setValue(55);
         m_module->save();
-        QVERIFY(entry(QStringLiteral("Groups"))[0].endsWith(QStringLiteral(":Games")));
-        QVERIFY(entry(QStringLiteral("DesktopGroups")).contains(QStringLiteral("w1=desktops")));
+        QCOMPARE(entry(QStringLiteral("Groups")), groups);
+        QCOMPARE(entry(QStringLiteral("DesktopGroups")), members);
+        QCOMPARE(entry(QStringLiteral("HiddenDesktops")), hidden);
 
-        // removing Games moves Code to the first group left; nothing else changes
-        m_module->load();
-        list->setCurrentRow(0);
-        button(QStringLiteral("Remove"))->click();
+        // Ectoview changes the groups while the page is open; the page's next Apply keeps Ectoview's
+        const QStringList groups2 = {QStringLiteral("g2:Games"), QStringLiteral("g1:Work"), QStringLiteral("g3:Mail")};
+        const QStringList members2 = {QStringLiteral("w1=g3"), QStringLiteral("c0=g2")};
+        ectoview = group(QStringLiteral("Effect-ectoview"));
+        ectoview.writeEntry("Groups", groups2);
+        ectoview.writeEntry("DesktopGroups", members2);
+        ectoview.deleteEntry("HiddenDesktops");
+        ectoview.sync();
+        find<QSlider>(QStringLiteral("kcfg_BackgroundDim"))->setValue(45);
         m_module->save();
-        QVERIFY(entry(QStringLiteral("Groups")).isEmpty());
-        QCOMPARE(entry(QStringLiteral("DesktopGroups")), QStringList{QStringLiteral("c1=hidden")});
+        QCOMPARE(entry(QStringLiteral("Groups")), groups2);
+        QCOMPARE(entry(QStringLiteral("DesktopGroups")), members2);
+        QVERIFY(!group(QStringLiteral("Effect-ectoview")).hasKey("HiddenDesktops"));
     }
 
     void defaultsPutEverythingBack()
@@ -408,10 +401,13 @@ private Q_SLOTS:
         QVERIFY(radio(QStringLiteral("All of Ectoview, like the primary screen"))->isChecked());
         QVERIFY(!checkBox(QStringLiteral("Switch desktops independently for each screen"))->isChecked());
         QCOMPARE(find<QSlider>(QStringLiteral("kcfg_BackgroundDim"))->value(), 62);
-        QCOMPARE(picker(QStringLiteral("c1"))->currentData().toString(), QStringLiteral("desktops"));
+        const QStringList groups = entry(QStringLiteral("Groups"));
+        const QStringList members = entry(QStringLiteral("DesktopGroups"));
         m_module->save();
-        QVERIFY(entry(QStringLiteral("DesktopGroups")).isEmpty());
-        QVERIFY(entry(QStringLiteral("Groups")).isEmpty());
+        // Defaults is for this page's settings: Ectoview's desktop groups stay as they are
+        QVERIFY(!groups.isEmpty());
+        QCOMPARE(entry(QStringLiteral("Groups")), groups);
+        QCOMPARE(entry(QStringLiteral("DesktopGroups")), members);
         // KConfig stores a default by removing the key; Ectoview then reads main.xml's default (false)
         const KConfigGroup ectoview = group(QStringLiteral("Effect-ectoview"));
         QVERIFY(!ectoview.hasKey("OtherScreens") || ectoview.readEntry("OtherScreens", 0) == 0);

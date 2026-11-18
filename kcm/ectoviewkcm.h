@@ -11,16 +11,11 @@
 
 #include <KCModule>
 
-#include <QHash>
 #include <QWidget>
 
 class KShortcutsEditor;
 class QCheckBox;
-class QComboBox;
 class QLabel;
-class QListWidget;
-class QListWidgetItem;
-class QPushButton;
 class QRadioButton;
 
 namespace Ectoview
@@ -57,46 +52,15 @@ public:
     void save() override;
     void defaults() override;
 
-    // a desktop group (design proposal 4): kwinrc [Effect-ectoview] Groups holds "id:name" each
-    struct Group {
-        QString id;
-        QString name;
-    };
-
 private:
     void updateUnmanagedState();
     QString primaryScreenText() const;
-
-    // ---- desktop groups: the same groups Ectoview's pill lists, and each desktop's group
-    void showGroups();
-    void addGroup();
-    void removeGroup();
-    void moveGroup(int by);
-    void groupRenamed(QListWidgetItem *item);
-    void updateGroupButtons();
-    QString groupOf(const QString &desktopId) const;
-    QString nextGroupName() const;
-    // what Ectoview reads: Groups and DesktopGroups, written the way Ectoview writes them
-    QStringList groupsEntry() const;
-    QStringList membershipEntry() const;
 
     ScreenChoice *m_screens = nullptr;
     KShortcutsEditor *m_shortcuts = nullptr;
     QCheckBox *m_perScreenDesktops = nullptr;
     QLabel *m_screenHint = nullptr;
     bool m_loadedPerScreenDesktops = false;
-    QListWidget *m_groupList = nullptr;
-    QPushButton *m_renameGroup = nullptr;
-    QPushButton *m_removeGroup = nullptr;
-    QPushButton *m_groupUp = nullptr;
-    QPushButton *m_groupDown = nullptr;
-    // one group picker per desktop KWin has, by its id
-    QList<QComboBox *> m_desktopPickers;
-    QList<Group> m_groups;
-    QHash<QString, QString> m_membership;
-    QStringList m_loadedGroups;
-    QStringList m_loadedMembership;
-    bool m_showing = false;
 };
 
 } // namespace Ectoview

@@ -6,6 +6,7 @@ highest scale): the dashboard screen at (0, 617, 1966x823), the main one at (196
 A plant-* scenario runs a copy with one boundary broken: it passes only when the check it
 targets fails."""
 import os
+import json
 import re
 import sys
 import pathlib
@@ -347,6 +348,26 @@ elif scenario == 'shortcuts':
     # Meta+K: Qt's Meta modifier (0x10000000) plus K (0x4b)
     check("a shortcut set on the settings page's Shortcuts tab (key editor, Custom, Meta+K, Apply) is what KDE's shortcut service holds",
           m and '268435531' in m.group(1), m.group(1) if m else 'no reading')
+    # the window shows Ectoview's name and icon, not "kcmshell6" and Wayland's W (November 17, 2026)
+    named = re.search(r'settings named (\{.*\})', steps)
+    named = json.loads(named.group(1)) if named else {}
+    check('the settings window is named Ectoview, from the settings module\'s own description',
+          named.get('caption') == 'Ectoview', str(named))
+    # and Plasma shows it: the title bar's icon (the window is placed at the main screen's x + 200, y 10)
+    # is Ectoview's green mark, not the orange W it showed while Plasma couldn't find the icon
+    top = img('settings-top')
+    if top:
+        px = list(region(top, (MAIN[0] + 204, 14, 20, 20)).getdata())
+        green = sum(1 for r, g, b in px if g > 170 and b < 110 and g > r + 10) / len(px)
+        orange = sum(1 for r, g, b in px if r > 200 and b < 110 and r > g + 30) / len(px)
+        check("Plasma shows Ectoview's icon in the settings window's title bar, not Wayland's W",
+              green > 0.12 and orange < 0.04, f'{green:.0%} of the icon green, {orange:.0%} orange')
+    else:
+        check('pictures taken', False)
+    icon = re.search(r'settings icon: (\d+) sizes; entry: (.*)', steps)
+    check("its entry (kwin_ectoview_config.desktop, the name kcmshell6 gives the window) shows Ectoview's icon, installed at every size",
+          named.get('desktopFile') == 'kwin_ectoview_config' and icon and int(icon.group(1)) >= 7 and icon.group(2).strip() == 'Icon=ectoview',
+          f"{named.get('desktopFile')}; {icon.group(0) if icon else 'no reading'}")
 elif scenario == 'gridgroups':
     common()
     steps = (out / 'steps.log').read_text(errors='replace') if (out / 'steps.log').exists() else ''

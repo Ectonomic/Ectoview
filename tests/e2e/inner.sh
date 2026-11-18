@@ -3,7 +3,10 @@
 # four desktops, two screens (a 1.75-scaled one on the left as the dashboard), real apps.
 W=$1; OUT=$2; PKG=$3; HERE=$(cd "$(dirname "$0")" && pwd)
 SCENARIO=${SCENARIO:-smoke}
-export XDG_RUNTIME_DIR=$W/rt XDG_CONFIG_HOME=$W/xdg/config XDG_DATA_HOME=$W/xdg/data XDG_CACHE_HOME=$W/xdg/cache XDG_STATE_HOME=$W/xdg/state HOME=$W/home
+export XDG_RUNTIME_DIR=$W/rt XDG_CONFIG_HOME=$W/xdg/config XDG_DATA_HOME=$W/home/.local/share XDG_CACHE_HOME=$W/xdg/cache XDG_STATE_HOME=$W/xdg/state HOME=$W/home
+# (the data folder where a stranger's is, ~/.local/share: install.sh's default prefix puts the
+# settings window's icon and desktop entry there, and Plasma looks there)
+mkdir -p "$XDG_DATA_HOME"
 unset WAYLAND_DISPLAY DISPLAY
 # logs stay in the test output, never the real journal (run.sh hides its socket too)
 export QT_FORCE_STDERR_LOGGING=1
@@ -333,14 +336,17 @@ kcmview|shortcuts)
   # the settings page, installed as a stranger would, opened tall enough to show its shortcuts editor.
   # shortcuts: its Shortcuts tab, a shortcut's key editor, Custom, Meta+K recorded, Apply (positions
   # for the window this places at 1000 px wide); kcmview: clicks given in KCMVIEW_* for looking around
-  if [ "$SCENARIO" = shortcuts ]; then KCMVIEW_CLICKS="433,53 630,440 377,505"; KCMVIEW_COMBO=37; KCMVIEW_THEN="1062,1307"; fi
+  if [ "$SCENARIO" = shortcuts ]; then KCMVIEW_CLICKS="320,90 630,477 377,542"; KCMVIEW_COMBO=37; KCMVIEW_THEN="1062,1307"; fi
   REPO=$(dirname "$PKG")
   ECTOVIEW_NO_SESSION_ENV=1 "$REPO/install.sh" > "$OUT/install-run.log" 2>&1; log "install exit $?"
   ( . "$XDG_CONFIG_HOME/plasma-workspace/env/ectoview.sh"; kcmshell6 kwin/effects/configs/kwin_ectoview_config > "$OUT/kcmshell.log" 2>&1 & )
   sleep 5
-  script 'for (const w of workspace.stackingOrder) if ((w.resourceClass + w.resourceName + w.caption).indexOf("kcmshell") >= 0) { const g = w.output.geometry; w.frameGeometry = {x: g.x + 200, y: g.y + 10, width: 1000, height: g.height - 120}; workspace.activeWindow = w; print("settings window " + JSON.stringify(w.frameGeometry)); }'
+  script 'for (const w of workspace.stackingOrder) if ((w.resourceClass + w.resourceName + w.caption).indexOf("kcmshell") >= 0) { const g = w.output.geometry; w.frameGeometry = {x: g.x + 200, y: g.y + 10, width: 1000, height: g.height - 120}; workspace.activeWindow = w; print("settings window " + JSON.stringify(w.frameGeometry)); print("settings named " + JSON.stringify({caption: w.caption, desktopFile: w.desktopFileName})); }'
   sleep 1.5
   log "$(grep 'js: settings window' "$OUT/kwin.log" | tail -1 | sed 's/.*js: //')"
+  log "$(grep 'js: settings named' "$OUT/kwin.log" | tail -1 | sed 's/.*js: //')"
+  # its icon and its desktop entry, where the install put them (the sandbox's own home)
+  log "settings icon: $(ls "$HOME"/.local/share/icons/hicolor/*/apps/ectoview.svg 2>/dev/null | wc -l) sizes; entry: $(grep -h '^Icon=' "$HOME"/.local/share/applications/kwin_ectoview_config.desktop 2>/dev/null)"
   shot "$OUT/settings-top.png"
   # click a shortcut's Global cell (KCMVIEW_CLICKS: "x,y x,y ..." in the main screen's logical pixels)
   MXL=$(python3 -c "import re;t=open('$OUT/kwin.log').read();m=re.search(r'Virtual-1 \{\"x\":([0-9.]+)',t);print(round(float(m.group(1))))")

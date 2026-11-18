@@ -1,3 +1,7 @@
+<p align="center">
+  <img src="icons/sc-apps-ectoview.svg" width="88" alt="Ectoview's icon: a window on Ectonomic's green mark">
+</p>
+
 <h1 align="center">Ectoview</h1>
 
 <p align="center">
@@ -51,7 +55,7 @@ biggest first. Each links to its section.
 | [Clicks that mean it](#the-scroll-wheel-and-clicks) | A click on the backdrop closes Overview | Only a click on a desktop or a window takes you somewhere; the backdrop and a faded arrow do nothing |
 | [Ecto's look, or KDE's](#ectos-look-or-kdes) | Your KDE colors | Ecto's dark look in Geist, or your KDE colors and font, with an accent of your choice and how dark the backdrop gets |
 | [Where the bar sits](#where-the-bar-sits) | Top | Top, bottom, left or right, with or without the toolbar |
-| [A settings page in three tabs](#settings) | One page | General, Desktop groups and Shortcuts, a gear beside the search field to open it, and KWin's per-screen desktops switch and one-desktop shortcuts in it too |
+| [A settings page in two tabs](#settings) | One page | General and Shortcuts, a gear beside the search field to open it, and KWin's per-screen desktops switch and one-desktop shortcuts in it too |
 
 <p align="center">
   <img src="docs/pictures/readme-vs-overview.webp" width="100%" alt="Overview and Ectoview on the same desktop, the divider sweeping from one to the other. Overview: every desktop in one row along the top and the search field. Ectoview: the Work group's four desktops, each with its dot beside its name, the groups' button with its arrows left of the search field, and the settings gear">
@@ -204,14 +208,16 @@ button and the gear sit at the bar's end.
 ## Settings
 
 The gear beside the search field opens Ectoview's settings, also in System Settings under
-Window Management, Desktop Effects. Three tabs:
+Window Management, Desktop Effects. Two tabs:
 
 - **General:** the look, the accent, the backdrop's darkness, where the bar sits and the
   toolbar, what the other screens show, and KWin's own Switch desktops independently for
   each screen.
-- **Desktop groups:** your groups and which desktops are in each.
 - **Shortcuts:** Ectoview's own, with KWin's one-desktop switches (left, right, up and
   down) beside them, like items together.
+
+Desktop groups aren't in the settings: you make and change them in Ectoview itself, where
+your desktops are in sight.
 
 ## Status
 

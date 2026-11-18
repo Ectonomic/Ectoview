@@ -1,0 +1,8 @@
+[Desktop Entry]
+# The settings window's own entry: kcmshell6 names its window after the settings module
+# (kwin_ectoview_config), and Plasma finds the window's icon and name here. Not in the menus.
+Type=Application
+Name=Ectoview Settings
+Icon=ectoview
+Exec=kcmshell6 kwin/effects/configs/kwin_ectoview_config
+NoDisplay=true

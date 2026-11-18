@@ -35,3 +35,6 @@ target_link_libraries(kwin_ectoview_config
     KF6::WidgetsAddons
     KF6::XmlGui
 )
+
+# the settings window's icon and name in Plasma's taskbar (kcmshell6 names the window after the module)
+install(FILES kwin_ectoview_config.desktop DESTINATION ${KDE_INSTALL_APPDIR})

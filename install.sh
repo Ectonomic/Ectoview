@@ -84,10 +84,20 @@ cat > "$ENV_SCRIPT" <<EOF
 # Ectoview's settings page (Qt looks for plugins in QT_PLUGIN_PATH as well as its own folder).
 export QT_PLUGIN_PATH="$PLUGINS\${QT_PLUGIN_PATH:+:\$QT_PLUGIN_PATH}"
 EOF
+# the settings window's icon and desktop entry are in the prefix's share folder: Plasma looks in the
+# data home (~/.local/share, the default prefix's) and XDG_DATA_DIRS, so another prefix is added there
+SHARE=$PREFIX/share
+[ "$SHARE" = "$(realpath -m "${XDG_DATA_HOME:-$HOME/.local/share}")" ] && SHARE=
+echo "$SHARE" > "$STATE/share"
+[ -n "$SHARE" ] && echo "export XDG_DATA_DIRS=\"$SHARE:\${XDG_DATA_DIRS:-/usr/local/share:/usr/share}\"" >> "$ENV_SCRIPT"
 # for programs started from now on through systemd or D-Bus (the rest after the next login)
 if session_env_ok; then
     current=$(systemctl --user show-environment | sed -n 's/^QT_PLUGIN_PATH=//p')
     case ":$current:" in *":$PLUGINS:"*) ;; *) systemctl --user set-environment "QT_PLUGIN_PATH=$PLUGINS${current:+:$current}" || true;; esac
+    if [ -n "$SHARE" ]; then
+        current=$(systemctl --user show-environment | sed -n 's/^XDG_DATA_DIRS=//p')
+        case ":$current:" in *":$SHARE:"*) ;; *) systemctl --user set-environment "XDG_DATA_DIRS=$SHARE:${current:-/usr/local/share:/usr/share}" || true;; esac
+    fi
 fi
 
 # ---- 4. Ectoview in, Overview out

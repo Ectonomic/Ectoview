@@ -68,6 +68,12 @@ if session_env_ok; then
     rest=$(printf '%s' "$current" | tr ':' '\n' | grep -vxF "$PLUGINS" | paste -sd: - || true)
     if [ -n "$rest" ]; then systemctl --user set-environment "QT_PLUGIN_PATH=$rest" || true
     elif [ -n "$current" ]; then systemctl --user unset-environment QT_PLUGIN_PATH || true; fi
+    SHARE=$(cat "$STATE/share" 2>/dev/null || true)
+    if [ -n "$SHARE" ]; then
+        current=$(systemctl --user show-environment | sed -n 's/^XDG_DATA_DIRS=//p')
+        rest=$(printf '%s' "$current" | tr ':' '\n' | grep -vxF "$SHARE" | paste -sd: - || true)
+        [ -n "$rest" ] && systemctl --user set-environment "XDG_DATA_DIRS=$rest" || true
+    fi
 fi
 rm -rf "$STATE"
 
