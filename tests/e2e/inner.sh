@@ -50,9 +50,10 @@ OtherScreens=$OTHER
 $(printf '%b' "${EXTRA_EFFECT_CONFIG:-}")
 $([ -n "$README" ] && readme_groups)
 $([ "$SCENARIO" = readme-kdelook ] && printf 'Look=1\nAccent=1\n')
-$(case "$SCENARIO" in readme-bartop) printf 'BarPosition=0\n';; readme-barbottom) printf 'BarPosition=1\n';; readme-barleft) printf 'BarPosition=2\nShowToolbar=false\n';; readme-barright) printf 'BarPosition=3\nShowToolbar=false\n';; esac)
+$(case "$SCENARIO" in readme-bartop) printf 'BarPosition=0\n';; readme-barbottom) printf 'BarPosition=1\n';; readme-barleft) printf 'BarPosition=2\nShowToolbar=false\n';; readme-barright) printf 'BarPosition=3\nShowToolbar=false\n';; readme-barlefttb) printf 'BarPosition=2\n';; readme-barrighttb) printf 'BarPosition=3\n';; esac)
 $([ "$SCENARIO" = crossscreen ] && printf 'Groups=desktops:Desktops,g1:Games\nDesktopGroups=d1=desktops,d2=desktops,d3=g1,d4=g1\n')
-$(case "$SCENARIO" in arrows|plant-arrows|arrowsback) printf 'Groups=desktops:Desktops,g1:Games\nDesktopGroups=d1=desktops,d2=desktops,d3=desktops,d4=g1\n';; esac)
+$(case "$SCENARIO" in arrowsside|plant-arrowsside) printf 'BarPosition=3\n';; esac)
+$(case "$SCENARIO" in arrows|plant-arrows|arrowsback|arrowsside|plant-arrowsside) printf 'Groups=desktops:Desktops,g1:Games\nDesktopGroups=d1=desktops,d2=desktops,d3=desktops,d4=g1\n';; esac)
 $([ "$SCENARIO" = gridgroups ] && printf 'Groups=desktops:Desktops,g1:Games\nDesktopGroups=d1=desktops,d2=desktops,d3=g1,d4=hidden\n')
 $(case "$SCENARIO" in transition|plant-transition) printf 'Groups=desktops:Desktops,g1:Games\nDesktopGroups=d1=desktops,d2=desktops,d3=g1,d4=g1\n';; esac)
 $(case "$SCENARIO" in groupshortcut|plant-groupshortcut) printf 'Groups=desktops:Desktops,g1:Games\nDesktopGroups=%s\n' "$(for i in $(seq 14); do printf 'd%d=%s,' $i $([ $i -le 7 ] && echo desktops || echo g1); done)";; esac)
@@ -69,6 +70,12 @@ if [ "$SCENARIO" = plant-reorder ]; then
   P=$XDG_DATA_HOME/kwin/effects/ectoview/contents/ui/impl/DesktopBar.qml
   sed -i 's#^\( *\)bar.moveDesktop(me, place);#\1// planted: no move#' "$P"
   grep -q 'planted: no move' "$P" && log "planted: a drop doesn't move the desktop" || log "FAIL plant not placed"
+fi
+if [ "$SCENARIO" = plant-arrowsside ]; then
+  # the arrows measured from the screen's edges again, so the one by a side bar sits on the bar
+  P=$XDG_DATA_HOME/kwin/effects/ectoview/contents/ui/impl/Main.qml
+  sed -i 's#readonly property real gutter: side < 0 ? view.x - container.barLeftEdge : container.barRightEdge - view.x - view.width#readonly property real gutter: side < 0 ? view.x : container.width - view.x - view.width // planted#' "$P"
+  grep -q 'planted' "$P" && log "planted: the arrows measured from the screen's edges" || log "FAIL plant not placed"
 fi
 if [ "$SCENARIO" = plant-gridstack ]; then
   # Grid View back to one line per group, as wide as the longest (no stacking)
@@ -385,6 +392,21 @@ kcmview|shortcuts)
   for xy in ${KCMVIEW_THEN:-}; do X=${xy%,*}; Y=${xy#*,}; feed "move $((MXL + X)) $Y"; sleep 0.4; feed "click"; sleep 1.5; done
   shot "$OUT/after.png"
   log "keys: $(gdbus call --session --dest org.kde.kglobalaccel --object-path /kglobalaccel --method org.kde.KGlobalAccel.shortcutKeys "['kwin', 'Ectoview Next Desktop in Desktop Group', '', '']" 2>&1)"
+  ;;
+arrowsside|plant-arrowsside)
+  # the desktop view's arrows beside a side bar: on Code, both "<" (Work) and ">" (Design) show; the bar
+  # on the right, then on the left. Each time Ectoview logs where its arrows, the
+  # bar's inner edge and the view sit ("Ectoview: side arrows"), read by check.py
+  # (on Code, the group's middle desktop, so both arrows show: the one by the bar and the far one)
+  script 'workspace.currentDesktop = workspace.desktops[1];'; sleep 1; wait_closed
+  kglob "Ectoview"; sleep 2.5; shot "$OUT/right.png"; kglob "Ectoview"; sleep 1; wait_closed
+  kwriteconfig6 --file kwinrc --group Effect-ectoview --key BarPosition 2
+  qdbus org.kde.KWin /Effects org.kde.kwin.Effects.reconfigureEffect ectoview; sleep 1
+  kglob "Ectoview"; sleep 2.5; shot "$OUT/left.png"; kglob "Ectoview"; sleep 1; wait_closed
+  # the settings page's "Show arrows beside the desktop view" off: no arrows, and the view takes their room
+  kwriteconfig6 --file kwinrc --group Effect-ectoview --key ShowSideArrows false
+  qdbus org.kde.KWin /Effects org.kde.kwin.Effects.reconfigureEffect ectoview; sleep 1
+  kglob "Ectoview"; sleep 2.5; shot "$OUT/off.png"; kglob "Ectoview"; sleep 1
   ;;
 gridstack|plant-gridstack)
   # design proposal 10: groups of 3, 3, 11 and 2 desktops (D1 to D19) on the 3440-wide main screen,

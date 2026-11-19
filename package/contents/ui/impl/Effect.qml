@@ -368,6 +368,7 @@ QtObject {
     readonly property int barPosition: Math.max(0, Math.min(3, Number(configuration.BarPosition) || 0))
     // the toolbar: the search field and the settings gear
     readonly property bool showToolbar: configuration.ShowToolbar !== false && String(configuration.ShowToolbar) !== "false"
+    readonly property bool showSideArrows: configuration.ShowSideArrows !== false && String(configuration.ShowSideArrows) !== "false"
     // the primary screen: KWin's first in its screen order
     readonly property QtObject primaryScreen: KWinComponents.Workspace.screenOrder.length > 0 ? KWinComponents.Workspace.screenOrder[0] : null
     function showsOn(screen) {

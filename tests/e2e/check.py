@@ -379,6 +379,38 @@ elif scenario == 'gridgroups':
     dc = line('dragged code')
     check("a desktop dragged into another group's row joins that group, at the end of its row", 'Work,Design,Code,Music' in dc and re.search(r'd2=g1\b', dc), dc)
     check('arrow keys move between rows in the group grid', line('down').endswith('current Design'), line('down'))
+elif scenario in ('arrowsside', 'plant-arrowsside'):
+    common()
+    places = [json.loads(m) for m in re.findall(r'Ectoview: side arrows Virtual-1 (\{.*\})', log)]
+    def clear(p, side):
+        """the arrow on SIDE (-1 previous, 1 next): its caret clear of the view and on the screen,
+        its click area clear of the bar"""
+        c = p['previous'] if side < 0 else p['next']
+        if c is None:
+            return False, 'not shown'
+        g, k = p['glyph'] / 2, p['click'] / 2
+        if side < 0:
+            ok = c + g <= p['viewLeft'] - 4 and c - k >= p['barLeft'] and c - g >= 0
+        else:
+            ok = c - g >= p['viewRight'] + 4 and c + k <= p['barRight'] and c + g <= 3440
+        return ok, f"caret {c - g:.0f} to {c + g:.0f}, clicks {c - k:.0f} to {c + k:.0f}; view {p['viewLeft']:.0f} to {p['viewRight']:.0f}, bar edge {p['barLeft'] if side < 0 else p['barRight']:.0f}"
+    for name, pick in (('right', lambda p: p['barRight'] < 3440 and p['shown']), ('left', lambda p: p['barLeft'] > 0 and p['shown'])):
+        p = next((p for p in places if pick(p)), None)
+        if not p:
+            check(f'the arrows beside a {name}-hand bar were logged', False, f'{len(places)} placings')
+            continue
+        for side, what in ((-1, '<'), (1, '>')):
+            ok, detail = clear(p, side)
+            check(f'with the bar on the {name}, the {what} arrow sits whole between the view and the {"bar" if (side > 0) == (name == "right") else "screen edge"}', ok, detail)
+    # the arrows turned off on the settings page: neither drawn, and the view takes their room
+    left_on = next((p for p in places if p['barLeft'] > 0 and p['shown']), None)
+    off = next((p for p in places if p['barLeft'] > 0 and not p['shown']), None)
+    if off and left_on:
+        check('with the arrows off, neither is drawn and the view takes their room on both sides',
+              off['previous'] is None and off['next'] is None and off['viewLeft'] < left_on['viewLeft'] - 40 and off['viewRight'] > left_on['viewRight'] + 40,
+              f"arrows {off['previous']}, {off['next']}; view {off['viewLeft']:.0f} to {off['viewRight']:.0f}, with arrows {left_on['viewLeft']:.0f} to {left_on['viewRight']:.0f}")
+    else:
+        check('the view with the arrows off was logged', False, f'{len(places)} placings')
 elif scenario in ('gridstack', 'plant-gridstack'):
     common()
     steps = (out / 'steps.log').read_text(errors='replace') if (out / 'steps.log').exists() else ''

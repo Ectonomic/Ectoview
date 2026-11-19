@@ -48,7 +48,7 @@ biggest first. Each links to its section.
 | [Hidden desktops](#hidden-desktops) | ❌ No | ✅ A Hidden group: desktops kept out of the bar and out of Grid View until you open it, and quiet: they light no beacon |
 | [Grid View, by group](#grid-view-by-group) | Every desktop in one grid | A row per group, a long group stacked onto more rows lined up in columns, and the grid centered, so the desktops are drawn as big as the screen allows |
 | [Drag desktops into order](#drag-desktops-into-order) | Only in Grid View, by dropping a desktop on another | In the bar too, sliding the others aside, and the bar scrolls along when you reach its end |
-| [Carry a window to another desktop](#carry-a-window-to-another-desktop) | Drop it on a desktop in the bar | Also hold it on the < or > beside the big view: after a pause the view moves on, carrying the window |
+| [Carry a window to another desktop](#carry-a-window-to-another-desktop) | Drop it on a desktop in the bar | Also hold it on the < or > beside the big view: after a pause the view moves on, carrying the window (the arrows can be turned off) |
 | [Group shortcuts with Ectoview closed](#step-through-groups) | — | The new group's desktop rises in where you are, instead of the screen sliding sideways past every desktop between |
 | [Many desktops](#many-desktops) | The row scrolls when flicked, cut off sharply at its ends | < and > page along the row, and its ends fade into the backdrop |
 | [Your screens](#your-screens) | Opens on every screen | In full on the primary screen; your other screens can show the same, only their own windows, or nothing at all, for a screen you keep as a dashboard |
@@ -155,7 +155,8 @@ along.
 Drag a window onto a desktop in the bar, as in Overview, or onto a group's row in the list:
 it goes to that group's desktop, and you with it. Hold a window on the < or > beside the
 big view, and after a pause the view moves to the next desktop in the group, carrying it.
-Let go there.
+Let go there. A click on an arrow goes to that desktop. If you'd rather not have the arrows,
+turn them off in the settings: the view then takes their room.
 
 <p align="center">
   <img src="docs/pictures/readme-arrows.webp" width="100%" alt="The notes window dragged to the > at the right of the big view. After a pause the view slides on to the next desktop with the window still under the pointer, and it's let go there">
@@ -213,7 +214,8 @@ how dark the backdrop gets.
 ### Where the bar sits
 
 The bar goes along the top, bottom, left or right, and the toolbar can go: then the groups'
-button and the gear sit at the bar's end.
+button and the gear sit at the bar's end. With the bar on a side, the view keeps room for its
+arrows, so each sits in its own gap, clear of the bar and of the screen's edge.
 
 <table>
   <tr>
@@ -221,8 +223,8 @@ button and the gear sit at the bar's end.
     <td width="50%"><img src="docs/pictures/readme-bar-bottom.webp" width="100%" alt="The desktop bar along the bottom of the screen; the toolbar stays at the top"><br><sub><b>Bottom,</b> with the toolbar at the top</sub></td>
   </tr>
   <tr>
-    <td width="50%"><img src="docs/pictures/readme-bar-left.webp" width="100%" alt="The desktop bar down the left side without the toolbar: the groups' button and the gear at the bar's end"><br><sub><b>Left,</b> without the toolbar</sub></td>
-    <td width="50%"><img src="docs/pictures/readme-bar-right.webp" width="100%" alt="The desktop bar down the right side without the toolbar: the groups' button and the gear at the bar's end"><br><sub><b>Right,</b> without the toolbar</sub></td>
+    <td width="50%"><img src="docs/pictures/readme-bar-left.webp" width="100%" alt="The desktop bar down the left side without the toolbar: the groups' button and the gear at the bar's end. On Review, the view's < sits between the bar and the view, its > between the view and the screen's edge"><br><sub><b>Left,</b> without the toolbar</sub></td>
+    <td width="50%"><img src="docs/pictures/readme-bar-right.webp" width="100%" alt="The desktop bar down the right side without the toolbar: the groups' button and the gear at the bar's end. On Review, the view's < sits between the screen's edge and the view, its > between the view and the bar"><br><sub><b>Right,</b> without the toolbar</sub></td>
   </tr>
 </table>
 
@@ -231,9 +233,9 @@ button and the gear sit at the bar's end.
 The gear beside the search field opens Ectoview's settings, also in System Settings under
 Window Management, Desktop Effects. Two tabs:
 
-- **General:** the look, the accent, the backdrop's darkness, where the bar sits and the
-  toolbar, what the other screens show, and KWin's own Switch desktops independently for
-  each screen.
+- **General:** the look, the accent, the backdrop's darkness, where the bar sits, the
+  toolbar, the arrows beside the desktop view, what the other screens show, and KWin's own
+  Switch desktops independently for each screen.
 - **Shortcuts:** Ectoview's own, with KWin's one-desktop switches (left, right, up and
   down) beside them, like items together.
 

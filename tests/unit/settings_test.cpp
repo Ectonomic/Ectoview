@@ -297,6 +297,7 @@ private Q_SLOTS:
         QVERIFY(!checkBox(QStringLiteral("Switch desktops independently for each screen"))->isChecked());
         QCOMPARE(find<QComboBox>(QStringLiteral("kcfg_BarPosition"))->currentIndex(), 0);
         QVERIFY(find<QCheckBox>(QStringLiteral("kcfg_ShowToolbar"))->isChecked());
+        QVERIFY(find<QCheckBox>(QStringLiteral("kcfg_ShowSideArrows"))->isChecked());
     }
 
     void savesWhatEctoviewAndKWinRead()
@@ -308,6 +309,7 @@ private Q_SLOTS:
         find<QCheckBox>(QStringLiteral("kcfg_IgnoreMinimized"))->setChecked(true);
         find<QComboBox>(QStringLiteral("kcfg_BarPosition"))->setCurrentIndex(3);
         find<QCheckBox>(QStringLiteral("kcfg_ShowToolbar"))->setChecked(false);
+        find<QCheckBox>(QStringLiteral("kcfg_ShowSideArrows"))->setChecked(false);
         checkBox(QStringLiteral("Switch desktops independently for each screen"))->click();
         QVERIFY2(m_module->needsSave(), "changing the controls didn't mark the page as changed");
         m_module->save();
@@ -320,6 +322,7 @@ private Q_SLOTS:
         QCOMPARE(ectoview.readEntry("IgnoreMinimized", false), true);
         QCOMPARE(ectoview.readEntry("BarPosition", 0), 3);
         QCOMPARE(ectoview.readEntry("ShowToolbar", true), false);
+        QCOMPARE(ectoview.readEntry("ShowSideArrows", true), false);
         QCOMPARE(group(QStringLiteral("Windows")).readEntry("PerOutputVirtualDesktops", false), true);
     }
 
@@ -401,6 +404,7 @@ private Q_SLOTS:
         QVERIFY(radio(QStringLiteral("All of Ectoview, like the primary screen"))->isChecked());
         QVERIFY(!checkBox(QStringLiteral("Switch desktops independently for each screen"))->isChecked());
         QCOMPARE(find<QSlider>(QStringLiteral("kcfg_BackgroundDim"))->value(), 62);
+        QVERIFY(find<QCheckBox>(QStringLiteral("kcfg_ShowSideArrows"))->isChecked());
         const QStringList groups = entry(QStringLiteral("Groups"));
         const QStringList members = entry(QStringLiteral("DesktopGroups"));
         m_module->save();

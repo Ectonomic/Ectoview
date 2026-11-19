@@ -181,6 +181,12 @@ EctoviewEffectConfig::EctoviewEffectConfig(QObject *parent, const KPluginMetaDat
     auto toolbarHint = hintLabel(widget());
     toolbarHint->setText(i18nc("@info", "Without it, typing doesn't search, and the desktop groups and settings buttons move to the end of the desktop bar."));
     form->addRow(QString(), toolbarHint);
+    auto sideArrows = new QCheckBox(i18nc("@option:check", "Show arrows beside the desktop view"), widget());
+    sideArrows->setObjectName(QStringLiteral("kcfg_ShowSideArrows"));
+    form->addRow(i18nc("@label", "Arrows:"), sideArrows);
+    auto arrowsHint = hintLabel(widget());
+    arrowsHint->setText(i18nc("@info", "< and > go to the previous and next desktop in the group. Hold a dragged window on one to carry it there."));
+    form->addRow(QString(), arrowsHint);
 
     // ---- desktop groups are made and changed in Ectoview itself, where the desktops are in sight
     // (the settings page had a tab for them, the same things in a worse form: taken out November 17, 2026)

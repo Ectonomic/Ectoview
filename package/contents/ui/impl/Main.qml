@@ -342,7 +342,7 @@ FocusScope {
     }
     // the pause before a held window switches desktops, and between switches while it stays
     readonly property int arrowHoldMs: 1000
-    readonly property bool arrowsShown: overviewVal > 0 && gridVal < 1 && !windowsOnly && groupDesktops.length > 1
+    readonly property bool arrowsShown: effect.showSideArrows && overviewVal > 0 && gridVal < 1 && !windowsOnly && groupDesktops.length > 1
     // where the desktop view is (read again whenever it could have moved), without the slide of a
     // desktop switch in progress: the arrows stay put while the desktops slide past
     readonly property rect viewRect: {
@@ -359,16 +359,20 @@ FocusScope {
         required property int side
         readonly property QtObject target: container.neighborDesktop(side)
         readonly property rect view: container.viewRect
-        readonly property real gutter: side < 0 ? view.x : container.width - view.x - view.width
+        // the gutter between the view and what's beside it: the screen's edge, or the desktop bar's
+        // inner edge when the bar is on this side (the arrow was drawn over the bar before, taking
+        // the clicks meant for its desktops)
+        readonly property real gutter: side < 0 ? view.x - container.barLeftEdge : container.barRightEdge - view.x - view.width
         // 64 px off the view's edge, or the middle of a narrower gutter
         readonly property real offset: Math.max(20, Math.min(64, gutter / 2))
+        readonly property real centerX: side < 0 ? view.x - offset : view.x + view.width + offset
         theme: effect.theme
         angle: side < 0 ? 180 : 0
         label: target ? target.name : ""
         holdMs: container.arrowHoldMs
         width: 120
         height: 220
-        x: (side < 0 ? view.x - offset : view.x + view.width + offset) - width / 2
+        x: centerX - width / 2
         y: view.y + view.height / 2 - height / 2
         // above a window being dragged (z 1000), which would otherwise hide it
         z: 1100
@@ -380,13 +384,23 @@ FocusScope {
         onWindowDropped: (window) => window.desktops = [sideArrow.target]
     }
     SideArrow {
+        id: previousArrow
         objectName: "arrow-previous"
         side: -1
     }
     SideArrow {
+        id: nextArrow
         objectName: "arrow-next"
         side: 1
     }
+    // where the arrows sit, beside the view and the bar, once Ectoview has opened (for the tests:
+    // "Ectoview: side arrows")
+    readonly property string sideArrowPlaces: overviewVal === 1 && gridVal === 0 && !windowsOnly && groupDesktops.length > 1 ? JSON.stringify({
+        shown: arrowsShown,
+        previous: previousArrow.visible ? previousArrow.centerX : null, next: nextArrow.visible ? nextArrow.centerX : null,
+        glyph: nextArrow.glyphSize, click: nextArrow.clickWidth, barLeft: barLeftEdge, barRight: barRightEdge,
+        viewLeft: viewRect.x, viewRight: viewRect.x + viewRect.width }) : ""
+    onSideArrowPlacesChanged: if (sideArrowPlaces) console.info("Ectoview: side arrows " + targetScreen.name + " " + sideArrowPlaces)
 
     // a window dropped on New desktop group: the group, with a new desktop holding the window
     function newGroupForWindow(window) {
@@ -876,8 +890,16 @@ FocusScope {
     // These are the minimum position of maximum size of the desktop preview in the overview
     // Ectoview: the room the bar and the toolbar take on each side (Overview's minX and minY, with
     // the bar on any side)
-    readonly property int reservedLeft: barPosition === 2 ? desktopBar.width : 0
-    readonly property int reservedRight: barPosition === 3 ? desktopBar.width : 0
+    // (with the bar on the left or right, the view keeps room beside it for the arrow on that side:
+    // its click area and a little air, so it sits between the bar and the view, not on the bar)
+    readonly property int sideArrowRoom: 80
+    readonly property real barLeftEdge: barPosition === 2 && !windowsOnly ? desktopBar.width : 0
+    readonly property real barRightEdge: barPosition === 3 && !windowsOnly ? width - desktopBar.width : width
+    // (and on the other side too: a side bar leaves the view so wide on a 16:9 screen that the far
+    // side's arrow fell off the screen's edge)
+    readonly property bool sideBar: (barPosition === 2 || barPosition === 3) && !windowsOnly && effect.showSideArrows
+    readonly property int reservedLeft: (barPosition === 2 ? desktopBar.width : 0) + (sideBar ? sideArrowRoom : 0)
+    readonly property int reservedRight: (barPosition === 3 ? desktopBar.width : 0) + (sideBar ? sideArrowRoom : 0)
     readonly property int reservedTop: topBar.height + (barPosition === 0 ? desktopBar.height : 0)
     readonly property int reservedBottom: barPosition === 1 ? desktopBar.height : 0
     property int minX: Kirigami.Units.largeSpacing + reservedLeft

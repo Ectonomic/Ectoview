@@ -260,8 +260,13 @@ bar_still() {
 }
 scene_bartop() { bar_still bartop; }
 scene_barbottom() { bar_still barbottom; }
-scene_barleft() { bar_still barleft; }
-scene_barright() { bar_still barright; }
+# (on Review, the group's second desktop, so both of the view's arrows show, each between the bar
+# and the view)
+scene_barleft() { script 'workspace.currentDesktop = workspace.desktops[1];'; sleep 1; bar_still barleft; }
+scene_barright() { script 'workspace.currentDesktop = workspace.desktops[1];'; sleep 1; bar_still barright; }
+# (the same with the toolbar on, for a look; not in the README)
+scene_barlefttb() { script 'workspace.currentDesktop = workspace.desktops[1];'; sleep 1; bar_still barlefttb; }
+scene_barrighttb() { script 'workspace.currentDesktop = workspace.desktops[1];'; sleep 1; bar_still barrighttb; }
 scene_grid() {
   # Grid View: a row per desktop group; Work's ten stack onto more rows, lined up in columns, the grid centered
   place $((CX + 300)) $((MY + 700))

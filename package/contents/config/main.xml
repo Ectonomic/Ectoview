@@ -40,6 +40,11 @@
         <entry name="ShowToolbar" type="Bool">
             <default>true</default>
         </entry>
+        <!-- The < and > beside the desktop view, to the previous and next desktop in the group (and a
+             window held on one is carried there); off, neither is drawn and the view keeps no room for them -->
+        <entry name="ShowSideArrows" type="Bool">
+            <default>true</default>
+        </entry>
         <!-- What typing searches: 0 = the current desktop's windows (as Overview), 1 = every desktop in
              the shown group, 2 = every desktop's, hidden ones too (the caret inside the search field picks) -->
         <entry name="SearchScope" type="Int">
