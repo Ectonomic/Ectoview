@@ -137,10 +137,10 @@ FocusScope {
     // keeps this one shown (that desktop stays in the bar, dimmed, until you leave it).
     property string viewGroup: effect.groupOf(currentDesktop)
     onCurrentDesktopChanged: setViewGroup(effect.groupOf(currentDesktop), true)
-    // Ectoview: changing the shown group (design proposal 5, option A, Shelf): the bar's desktops lift
-    // away and the new group's rise into place, up or down by where the group sits in the pill's
-    // list; with `newView` the big view switches desktops too and rises 16 px into place, fading in,
-    // instead of sliding sideways (that would say "next desktop"). Instant animations skip it.
+    // Ectoview: changing the shown group (design proposal 11): the bar's desktops slide up and away as
+    // the new group's slide up into place, down for a group higher in the pill's list; with `newView`
+    // the big view switches desktops too, the one you were on sliding out of the view's frame as the
+    // new one slides in (not sideways: that would say "next desktop"). Instant animations skip it.
     property bool switchingGroup: false
     function groupPlace(id) {
         const i = effect.groups.findIndex(g => g.id === id);
@@ -155,46 +155,52 @@ FocusScope {
             const direction = groupPlace(id) >= groupPlace(viewGroup) ? 1 : -1;
             bar.beginGroupTransition(direction);
             if (newView) {
+                // the view you're on slides up and away inside the view's frame as the new group's
+                // desktop slides up into it (down for a group higher in the list; design proposal 11)
                 switchingGroup = true;
-                viewRise.from = 16 * direction;
-                viewFade.restart();
+                slideDirection = direction;
+                slideClip = viewRect;
+                stepFrom = currentDesktop;
+                openSliding = true;
+                stepIn = 0;
+                openSlide.restart();
             }
         }
         viewGroup = id;
     }
-    ParallelAnimation {
-        id: viewFade
-        NumberAnimation {
-            target: desktopGrid
-            property: "opacity"
-            from: 0
-            to: 1
-            duration: effect.animationDuration * 220 / 300
-            easing.type: Easing.OutCubic
+    NumberAnimation {
+        id: openSlide
+        target: container
+        property: "stepIn"
+        from: 0
+        to: 1
+        duration: effect.animationDuration
+        easing.type: Easing.OutCubic
+        onStopped: {
+            container.openSliding = false;
+            container.stepFrom = null;
+            container.switchingGroup = false;
         }
-        NumberAnimation {
-            id: viewRise
-            target: viewShift
-            property: "y"
-            to: 0
-            duration: effect.animationDuration * 220 / 300
-            easing.type: Easing.OutCubic
-        }
-
-        onStopped: container.switchingGroup = false
     }
+    // a group change sliding: the desktop left (stepFrom) and the one arrived, by stepIn (0 to 1),
+    // up for a group further down the list (slideDirection 1), down for one higher (-1); open, inside
+    // the view's frame as it stood (slideClip), closed, the whole screen
+    property bool openSliding: false
+    property int slideDirection: 1
+    property rect slideClip: Qt.rect(0, 0, 0, 0)
+    readonly property bool sliding: stepping || openSliding
+    readonly property real slideDistance: openSliding ? slideClip.height + 24 : height
     // ---- a group shortcut with Ectoview closed (Effect.qml stepGroup): on your screen's view, in its
-    // first frame (the desktop as it is), the desktop switches, the one you left stays where it stood,
-    // and the new one rises 16 px and fades in over it, as a group change does in Ectoview
+    // first frame (the desktop as it is), the desktop switches, the one you left slides up and off the
+    // screen as the new one slides up into place (down for the previous group), as a group change
+    // does in Ectoview
     readonly property bool stepping: effect.groupStepping && targetScreen === KWinComponents.Workspace.activeScreen
     onSteppingChanged: if (stepping) stepSwitch.start()
     property QtObject stepFrom: null
     property real stepIn: 1
-    property real stepRise: 0
     ParallelAnimation {
         id: stepAnimation
-        NumberAnimation { target: container; property: "stepIn"; from: 0; to: 1; duration: effect.animationDuration * 220 / 300; easing.type: Easing.OutCubic }
-        NumberAnimation { target: container; property: "stepRise"; from: 16; to: 0; duration: effect.animationDuration * 220 / 300; easing.type: Easing.OutCubic }
+        NumberAnimation { target: container; property: "stepIn"; from: 0; to: 1; duration: effect.animationDuration; easing.type: Easing.OutCubic }
         onStopped: {
             container.stepFrom = null;
             container.switchingGroup = false;
@@ -208,7 +214,7 @@ FocusScope {
         }
         switchingGroup = true;
         stepIn = 0;
-        stepRise = 16;
+        slideDirection = effect.groupStepDirection;
         stepFrom = currentDesktop;
         KWinComponents.SceneView.currentDesktop = effect.groupStepTarget;
         stepAnimation.restart();
@@ -927,14 +933,23 @@ FocusScope {
         onTriggered: desktopJustCreated = false
     }
 
+    // (while a group change slides with Ectoview open, the desktops are clipped to the view's frame as
+    // it stood, so nothing slides over the toolbar or the bar; otherwise the whole screen)
+    Item {
+        id: viewClip
+        readonly property bool clipping: container.openSliding
+        x: clipping ? container.slideClip.x : 0
+        y: clipping ? container.slideClip.y : 0
+        width: clipping ? container.slideClip.width : container.width
+        height: clipping ? container.slideClip.height : container.height
+        clip: clipping
     Item {
         id: desktopGrid
-        anchors.fill: parent
+        x: -viewClip.x
+        y: -viewClip.y
+        width: container.width
+        height: container.height
         property var dndManagerStore: ({})
-        // (the rise of a group change, Shelf)
-        transform: Translate {
-            id: viewShift
-        }
 
         // Ectoview: the group grid's rows: a band behind each (lit while a desktop from another group
         // is held over it, and a drop on it puts the desktop in that group) and its heading
@@ -1115,10 +1130,14 @@ FocusScope {
                 // move the view to another desktop while the window is held)
                 visible: ((gridVal > 0 ? inGrid : place >= 0) && (gridVal > 0 || nearCurrent)) || heap.dragActive || leaving
                 readonly property Item area: backgroundArea
-                // a group shortcut's change with Ectoview closed (stepping): the desktop you left stays
-                // where it stood, and the one you go to rises and fades in over it
-                readonly property bool leaving: container.stepping && container.stepFrom === desktop
-                readonly property bool arriving: container.stepping && !!container.stepFrom && current
+                // a group change sliding (closed: stepping; open: openSliding): the desktop you left
+                // slides away and the one you go to slides in, up or down (groupSlideY)
+                readonly property bool leaving: container.sliding && container.stepFrom === desktop
+                readonly property bool arriving: container.sliding && !!container.stepFrom && current && container.stepFrom !== desktop
+                // how far a group change's slide has this desktop from its place (and its windows,
+                // which are drawn on the view's own layer, follow it)
+                readonly property real groupSlideY: arriving ? (1 - container.stepIn) * container.slideDistance * container.slideDirection
+                    : leaving ? -container.stepIn * container.slideDistance * container.slideDirection : 0
                 Connections {
                     target: heap
                     function onDragActiveChanged() {
@@ -1136,7 +1155,7 @@ FocusScope {
                 anchors.fill: parent
                 property bool shouldBeVisibleInOverview: !(effect.searchText.length > 0 && current) || (!(current && container.currentHeapEmpty) && heap.count !== 0 && effect.filterWindows)
                 // (Ectoview: the Hidden row's desktops dimmed in the grid, except the one you're on)
-                opacity: (1 - overviewVal * (shouldBeVisibleInOverview ? 0 : 1)) * (inHiddenRow && !current ? 1 - 0.45 * gridVal : 1) * (arriving ? container.stepIn : 1)
+                opacity: (1 - overviewVal * (shouldBeVisibleInOverview ? 0 : 1)) * (inHiddenRow && !current ? 1 - 0.45 * gridVal : 1) 
                 readonly property bool inHiddenRow: !!gridAt && container.groupGrid && effect.isHidden(desktop)
 
                 function selectLastItem(direction) {
@@ -1226,7 +1245,7 @@ FocusScope {
                     Translate {
                         id: desktopTranslation
                         x: (minX - reservedRight) * 0.5 * overviewVal + (mainBackground.leaving ? 0 : deltaColumn * width * (1 - gridVal))
-                        y: (minY - reservedBottom) * 0.5 * overviewVal + (mainBackground.leaving ? 0 : deltaRow * height * (1 - gridVal)) + (mainBackground.arriving ? container.stepRise : 0)
+                        y: (minY - reservedBottom) * 0.5 * overviewVal + (mainBackground.leaving ? 0 : deltaRow * height * (1 - gridVal)) + mainBackground.groupSlideY
                     }
                 ]
 
@@ -1431,13 +1450,14 @@ FocusScope {
                     }
                     delegate: EctoWindowDelegate {
                         windowHeap: heap
-                        offsetX: mainBackground.deltaColumn * container.width * (gridVal > 0 ? 0 : 1) + (dragHandler.active ? (dragHandler.centroid.pressPosition.x - dragHandler.centroid.position.x) : 0)
-                        offsetY: mainBackground.deltaRow * container.height * (1 - gridVal) + (dragHandler.active ? (dragHandler.centroid.pressPosition.y - dragHandler.centroid.position.y) : 0)
+                        offsetX: (mainBackground.leaving ? 0 : mainBackground.deltaColumn * container.width * (gridVal > 0 ? 0 : 1)) + (dragHandler.active ? (dragHandler.centroid.pressPosition.x - dragHandler.centroid.position.x) : 0)
+                        offsetY: (mainBackground.leaving ? 0 : mainBackground.deltaRow * container.height * (1 - gridVal)) + mainBackground.groupSlideY + (dragHandler.active ? (dragHandler.centroid.pressPosition.y - dragHandler.centroid.position.y) : 0)
 
                         partialActivationFactor: container.overviewVal + container.gridVal * effect.organizedGrid
-                        stepFade: mainBackground.leaving ? 1 - container.stepIn : 1
                         // Parent switch needed for the option "organize windows in gridview"  to work correctly
-                        contentItemParent: container.gridVal > 0 ? mainBackground : container
+                        // (Ectoview: while a group change slides with Ectoview open, in the view's frame
+                        // with their desktops, so they don't slide over the toolbar)
+                        contentItemParent: container.gridVal > 0 ? mainBackground : (container.openSliding ? slideWindowLayer : container)
 
                         // This is preferable over using gestureInProgress values since gridVal and
                         // overviewVal are animated even after the gesture ends, and since the partial
@@ -1517,6 +1537,24 @@ FocusScope {
 
         }
 
+    }
+    }
+    // the windows' layer while a group change slides with Ectoview open: the same frame as the view's
+    // clip, the windows (drawn on the view's own layer, as Overview draws them) clipped with it
+    Item {
+        id: slideWindowClip
+        x: container.openSliding ? container.slideClip.x : 0
+        y: container.openSliding ? container.slideClip.y : 0
+        width: container.openSliding ? container.slideClip.width : container.width
+        height: container.openSliding ? container.slideClip.height : container.height
+        clip: container.openSliding
+        Item {
+            id: slideWindowLayer
+            x: -slideWindowClip.x
+            y: -slideWindowClip.y
+            width: container.width
+            height: container.height
+        }
     }
 
     Loader {

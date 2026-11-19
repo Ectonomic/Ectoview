@@ -48,10 +48,9 @@ Item {
     // a desktop dragged over the groups' pill lands in a group instead of a place
     property bool overPill: false
 
-    // ---- Ectoview: changing groups (design proposal 5, option A, Shelf). The groups are shelves in the
-    // pill's order: the leaving desktops lift 24 px and fade (0 to 120 ms), the new group's rise 24 px
-    // into place (100 to 300 ms), up for a group further down the list and down for one above it.
-    // Across the bar: up and down for a bar along the top or bottom, sideways for one on a side.
+    // ---- Ectoview: changing groups (design proposal 11): groups are a list from top to bottom, so the
+    // leaving desktops slide up and out of the bar as the new group's slide up into place (300 ms,
+    // easing out), down for a group higher in the list; up and down whichever side the bar is on.
     readonly property real motion: ecto.animationDuration / 300
     property bool transitioning: false
     // 1: the new group is further down the list (things move up), -1: further up
@@ -59,6 +58,10 @@ Item {
     // the leaving desktops, drawn where they were: [{ desktop, x, y }]
     property var ghosts: []
     signal groupEntered()
+    // how far a group change slides the bar's desktops: the bar's whole height, so the old group
+    // leaves it entirely (the bar clips them while they move)
+    readonly property real slideDistance: height
+    clip: transitioning
     function beginGroupTransition(direction) {
         if (motion <= 0) {
             return;
@@ -108,11 +111,9 @@ Item {
                 border.width: 1
                 border.color: bar.theme.c.border
             }
-            ParallelAnimation {
-                running: true
-                NumberAnimation { target: ghost; property: bar.verticalDesktopBar ? "x" : "y"; to: (bar.verticalDesktopBar ? ghost.modelData.x : ghost.modelData.y) - 24 * bar.transitionDirection; duration: 120 * bar.motion; easing.type: Easing.InCubic }
-                NumberAnimation { target: ghost; property: "opacity"; to: 0; duration: 120 * bar.motion; easing.type: Easing.InCubic }
-            }
+            // the old group's desktops slide up and out of the bar (down for a group higher in the
+            // list), the whole way, as the new group's slide in (design proposal 11)
+            NumberAnimation { running: true; target: ghost; property: "y"; to: ghost.modelData.y - bar.slideDistance * bar.transitionDirection; duration: 300 * bar.motion; easing.type: Easing.OutCubic }
         }
     }
     Timer {
@@ -416,7 +417,7 @@ Item {
         anchors.topMargin: bar.verticalDesktopBar ? bar.startInset : 0
         anchors.bottomMargin: bar.verticalDesktopBar ? bar.endInset : 0
         // the cut-off ends fade into the backdrop over 240 px
-        // (not while groups change: the desktops rise and lift a little past the bar's edge)
+        // (not while groups change: the desktops slide past the bar's edges, clipped by the bar)
         layer.enabled: bar.overflowing && !bar.transitioning
         layer.effect: OpacityMask {
             maskSource: Rectangle {
@@ -491,8 +492,8 @@ Item {
                     readonly property bool elsewhere: groupHere !== bar.viewGroup
                     visible: place >= 0
                     // (over the pill, the desktop rides under the pointer in the pill's list instead)
-                    opacity: dragged && bar.overPill ? 0 : enter
-                    // rising onto the shelf (0: 24 px off, faded; 1: in place)
+                    opacity: dragged && bar.overPill ? 0 : 1
+                    // sliding in with a group change (0: a bar's height away, 1: in place)
                     property real enter: 1
                     Connections {
                         target: bar
@@ -503,19 +504,14 @@ Item {
                             }
                         }
                     }
-                    SequentialAnimation {
+                    NumberAnimation {
                         id: enterAnimation
-                        PauseAnimation {
-                            duration: 100 * bar.motion
-                        }
-                        NumberAnimation {
-                            target: delegate
-                            property: "enter"
-                            from: 0
-                            to: 1
-                            duration: 200 * bar.motion
-                            easing.type: Easing.OutCubic
-                        }
+                        target: delegate
+                        property: "enter"
+                        from: 0
+                        to: 1
+                        duration: 300 * bar.motion
+                        easing.type: Easing.OutCubic
                     }
 
                     // Ectoview: while this desktop is dragged, how far the pointer has taken it;
@@ -545,8 +541,7 @@ Item {
                     z: dragged ? 10 : 0
                     transform: [
                         Translate {
-                            x: bar.verticalDesktopBar ? 24 * bar.transitionDirection * (1 - delegate.enter) : 0
-                            y: bar.verticalDesktopBar ? 0 : 24 * bar.transitionDirection * (1 - delegate.enter)
+                            y: bar.slideDistance * bar.transitionDirection * (1 - delegate.enter)
                         },
                         Translate {
                             x: bar.verticalDesktopBar ? 0 : delegate.shift

@@ -295,11 +295,13 @@ QtObject {
         // Ectoview closed: the change plays the group transition over the desktop as it is, not
         // KWin's slide sideways past every desktop between (the owner's ask, November 17, 2026).
         // Ectoview shows for a moment in its first frame, which looks just like the desktop; the
-        // view on your screen keeps a picture of it, switches, and the new desktop rises and fades
-        // in over it (Main.qml, stepping). A slide can't run meanwhile: KWin's slide stands aside
+        // view on your screen switches, and the desktop you were on slides up and away as the next
+        // group's slides up into place (down for the previous group: groups are a list, top to
+        // bottom; design proposal 11; Main.qml, sliding). A slide can't run meanwhile: KWin's slide stands aside
         // while a full-screen effect is up.
         if (overviewState.status === Togglable.Status.Inactive && !host.visible && animationDuration > 0) {
             groupStepTarget = target;
+            groupStepDirection = direction;
             groupStepping = true;
             host.visible = true;
             groupStepEnd.restart();
@@ -309,6 +311,7 @@ QtObject {
     }
     property bool groupStepping: false
     property QtObject groupStepTarget: null
+    property int groupStepDirection: 1
     function endGroupStep() {
         groupStepEnd.stop();
         groupStepping = false;

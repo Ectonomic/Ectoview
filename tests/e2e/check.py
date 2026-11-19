@@ -317,29 +317,37 @@ elif scenario in ('groupshortcut', 'plant-groupshortcut'):
     check('"Next Desktop Group" with Ectoview closed goes to the next group', bool(m) and m.group(1).endswith('current D8'), m.group(1) if m else 'no reading')
     v = re.search(r'visible after: (.*)', steps)
     check('and Ectoview is gone again afterwards', bool(v) and 'ectoview' not in v.group(1), v.group(1) if v else 'no reading')
-    # a slide sideways moves the big view across: a picture mid-change lines up with the settled
-    # one only when shifted; the group transition rises and fades in place (no sideways shift)
+    # the group change slides up and down (design proposal 11): a picture mid-change holds the next
+    # group's desktop coming up from below, the settled picture shifted down part of the screen and
+    # not sideways; KWin's own slide moves sideways past the desktops between
     from PIL import Image, ImageChops, ImageStat
-    def band(name, y0, y1):
+    def frame(name):
         im = Image.open(out / f'{name}.png').convert('L')
         s = im.height / 1440
         ox = im.width - round(3440 * s)
-        return im.crop((ox, round(y0 * s), im.width, round(y1 * s))).resize((860, max(8, round((y1 - y0) / 4))))
-    def best_shift(mid, after):
-        h = after.height
-        scores = []
-        for dx in range(-200, 201, 4):
-            shifted = ImageChops.offset(mid, dx, 0)
-            scores.append((ImageStat.Stat(ImageChops.difference(shifted.crop((210, 0, 650, h)), after.crop((210, 0, 650, h)))).mean[0], dx))
-        return min(scores)[1]
+        return im.crop((ox, 0, im.width, im.height)).resize((430, 180))
+    def best_offset(mid, after):
+        """(dx, dy) that best lines up the settled picture's part with the picture mid-change: the
+        settled picture moved right dx and down dy, compared where both are on the screen"""
+        best = None
+        for dy in range(0, 171, 3):
+            for dx in range(-60, 61, 6):
+                a = ImageChops.offset(after, dx, dy)
+                x0, x1 = max(0, dx), min(430, 430 + dx)
+                y0 = dy
+                if x1 - x0 < 100 or 180 - y0 < 10:
+                    continue
+                score = ImageStat.Stat(ImageChops.difference(mid.crop((x0, y0, x1, 180)), a.crop((x0, y0, x1, 180)))).mean[0]
+                if best is None or score < best[0]:
+                    best = (score, dx, dy)
+        return best
     if all((out / f'{n}.png').exists() for n in ('before', 't1', 't2', 'after')):
-        # a slide moves the desktop sideways against both ends; the group transition fades one into
-        # the other in place, so each picture mid-change lines up unshifted with one end or the other
-        y0, y1 = 160, 1000
-        ends = band('before', y0, y1), band('after', y0, y1)
-        shifts = [[best_shift(band(n, y0, y1), e) for e in ends] for n in ('t1', 't2')]
-        check("and plays the group transition over the desktop, not KWin's slide sideways (each picture mid-change lines up unshifted with one end)",
-              all(min(abs(a), abs(b)) <= 8 for a, b in shifts), f'best sideways shifts against before and after {shifts} (of 860 px)')
+        after = frame('after')
+        offs = [best_offset(frame(n), after) for n in ('t1', 't2')]
+        # (only a picture that lines up well says where things are: mid-change it holds parts of both)
+        moving = [o for o in offs if 8 <= o[2] <= 165 and o[0] < 12]
+        check("and slides the next group's desktop up into place over the desktop, not KWin's slide sideways (a picture mid-change: the settled one shifted down, not sideways)",
+              bool(moving) and all(abs(o[1]) <= 6 for o in moving), f'best (score, dx, dy) for t1, t2: {[tuple(round(v, 1) for v in o) for o in offs]} (of 430x180)')
     else:
         check('pictures taken', False)
 elif scenario == 'shortcuts':

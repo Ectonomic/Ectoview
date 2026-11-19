@@ -356,9 +356,9 @@ transition|plant-transition)
   ;;
 groupshortcut|plant-groupshortcut)
   # 14 desktops, D1 to D7 in Desktops and D8 to D14 in Games; Konsole, Dolphin and Kate on D1. With
-  # Ectoview closed, "Next Desktop Group" at a tenth of the speed: the group transition (D8 rising and
-  # fading in over D1 where it stands), not KWin's slide sideways past D2 to D7 (the owner's ask,
-  # November 17, 2026)
+  # Ectoview closed, "Next Desktop Group" at a tenth of the speed: the group transition (D1 sliding up
+  # off the screen as D8 slides up into place, design proposal 11), not KWin's slide sideways past
+  # D2 to D7 (the owner's asks, November 17 and 18, 2026)
   order() { script 'print("order " + workspace.desktops.map(d => d.name).join(",") + " current " + workspace.currentDesktop.name);'; grep "js: order" "$OUT/kwin.log" | tail -1 | sed 's/.*js: order //'; }
   shot "$OUT/before.png"
   log "pressed: $(date +%s%3N)"; kglob "Ectoview Next Desktop Group"

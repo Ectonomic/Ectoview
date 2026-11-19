@@ -23,7 +23,7 @@
 <br>
 
 <p align="center">
-  <img src="docs/pictures/readme-hero.webp" width="100%" alt="Meta+W pressed on a desktop with a terminal and a text editor. Ectoview opens: the Work group's desktops Code, Review, Docs and Mail in the bar along the top, the groups' button reading Work with its up and down arrows, the search field and the settings gear, and the desktop large below. A window in the Play group asks for attention and a dot lights on the groups' button. The down arrow takes the bar to the Home group, its desktops rising in; the up arrow brings Work back. Review is chosen from the bar and Ectoview closes onto it">
+  <img src="docs/pictures/readme-hero.webp" width="100%" alt="Meta+W pressed on a desktop with a terminal and a text editor. Ectoview opens: the Work group's desktops Code, Review, Docs and Mail in the bar along the top, the groups' button reading Work with its up and down arrows, the search field and the settings gear, and the desktop large below. A window in the Play group asks for attention and a dot lights on the groups' button. The down arrow slides the bar and the view up to the Home group; the up arrow slides Work back down. Review is chosen from the bar and Ectoview closes onto it">
 </p>
 
 Ectoview is a fork of Overview, the effect behind Meta+W in KDE Plasma 6. It keeps
@@ -49,7 +49,7 @@ biggest first. Each links to its section.
 | [Grid View, by group](#grid-view-by-group) | Every desktop in one grid | A row per group, a long group stacked onto more rows lined up in columns, and the grid centered, so the desktops are drawn as big as the screen allows |
 | [Drag desktops into order](#drag-desktops-into-order) | Only in Grid View, by dropping a desktop on another | In the bar too, sliding the others aside, and the bar scrolls along when you reach its end |
 | [Carry a window to another desktop](#carry-a-window-to-another-desktop) | Drop it on a desktop in the bar | Also hold it on the < or > beside the big view: after a pause the view moves on, carrying the window (the arrows can be turned off) |
-| [Group shortcuts with Ectoview closed](#step-through-groups) | — | The new group's desktop rises in where you are, instead of the screen sliding sideways past every desktop between |
+| [Group shortcuts with Ectoview closed](#step-through-groups) | — | The screen slides up to the next group's desktop or down to the previous group's, instead of sideways past every desktop between |
 | [Many desktops](#many-desktops) | The row scrolls when flicked, cut off sharply at its ends | < and > page along the row, and its ends fade into the backdrop |
 | [Your screens](#your-screens) | Opens on every screen | In full on the primary screen; your other screens can show the same, only their own windows, or nothing at all, for a screen you keep as a dashboard |
 | [The scroll wheel](#the-scroll-wheel-and-clicks) | Switches desktops anywhere, even while Overview closes | Switches desktops only over the bar, and never while Ectoview closes |
@@ -87,16 +87,18 @@ search field names the group shown and opens the list of them.
 
 ^ and v at the right end of the groups' button step to the previous and next group, at the
 same place whatever the group is called. At the first or last group, the arrow with nowhere
-to go dims. The bar's desktops lift away and the next group's rise in.
+to go dims. Groups are a list from top to bottom, so a group change moves up and down: going to
+the next group, the bar's desktops and the big view slide up and away as the next group's
+slide up into place; going back, they slide down.
 
 Four shortcuts, with no keys until you give them some in the settings: Next and Previous
 Desktop Group, and Next and Previous Desktop in Desktop Group. They work with Ectoview
-closed too. With it closed, a group shortcut brings the next group's desktop rising in over
-the one you're on, the way a group changes in Ectoview, instead of KWin sliding the screen
-sideways past every desktop between.
+closed too. With it closed, a group shortcut slides the whole screen up to the next group's
+desktop (down to the previous group's), the way a group changes in Ectoview, instead of KWin
+sliding the screen sideways past every desktop between.
 
 <p align="center">
-  <img src="docs/pictures/readme-shortcut.webp" width="100%" alt="Next Desktop Group pressed with Ectoview closed: the Code desktop with its terminal and editor stays where it is while the Home group's Music desktop rises and fades in over it. Previous Desktop Group brings Code back the same way">
+  <img src="docs/pictures/readme-shortcut.webp" width="100%" alt="Next Desktop Group pressed with Ectoview closed: the Code desktop with its terminal and editor slides up off the screen as the Home group's Music desktop slides up into place. Previous Desktop Group slides Code back down into place">
 </p>
 
 ### Hidden desktops
